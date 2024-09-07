@@ -143,7 +143,7 @@ if __name__ == "__main__":
 
     # Get embeddings
     num_aug = 5
-    noise_level = 0.1
+    noise_level = 0.7
     all_texts = documents["id"] + documents["ood"]
 
     for noise_type in [None, "Gaussian", "Dropout"]:
