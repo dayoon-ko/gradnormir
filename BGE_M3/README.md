@@ -1,6 +1,6 @@
 # Terminal
 ```
-sr 2 48 torchrun run.py --model_name_or_path intfloat/multilingual-e5-large  --output_dir results --train_data trec-covid/ood_all.json --same_task_within_batch True --sentence_pooling_method mean
+sr 2 48 torchrun run.py --model_name_or_path intfloat/multilingual-e5-large  --output_dir results --train_data /gallery_louvre/dayoon.ko/research/sds/eval_retrieval/BGE_M3/trec-covid/ood_all.json --same_task_within_batch True --sentence_pooling_method mean
 ```
 
 # BGE-M3 ([paper](https://arxiv.org/pdf/2402.03216.pdf), [code](https://github.com/FlagOpen/FlagEmbedding/tree/master/FlagEmbedding/BGE_M3))
