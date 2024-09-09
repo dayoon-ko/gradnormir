@@ -19,7 +19,7 @@ from transformers import (
 
 from arguments import ModelArguments, DataArguments, \
     RetrieverTrainingArguments as TrainingArguments
-from data import SameDatasetTrainDataset, EmbedCollator
+from data import SameDatasetTrainDataset, EmbedCollator 
 from modeling import BGEM3Model
 from trainer import BiTrainer
 
@@ -32,10 +32,18 @@ class TrainerCallbackForDataRefresh(TrainerCallback):
         self.train_dataset = train_dataset
         
     def on_epoch_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-            """
-            Event called at the end of an epoch.
-            """
-            self.train_dataset.refresh_epoch()
+        """
+        Event called at the end of an epoch.
+        """
+        self.train_dataset.refresh_epoch()
+
+    
+class TrainerCallbackForLog(TrainerCallback):
+        
+    def on_optimizer_step(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        control.should_log = True
+        
+        
         
 
 def main():
@@ -133,11 +141,13 @@ def main():
 
     if data_args.same_task_within_batch:
         trainer.add_callback(TrainerCallbackForDataRefresh(train_dataset))
+    trainer.add_callback(TrainerCallbackForLog())
     
     Path(training_args.output_dir).mkdir(parents=True, exist_ok=True)
     # Training
     # print(f"===========================Rank {dist.get_rank()}: start training===========================")
     trainer.train()
+    logs = trainer.state.history()
     #trainer.save_model()
     # For convenience, we also re-save the tokenizer to the same directory,
     # so that you can share your model easily on huggingface.co/models =)

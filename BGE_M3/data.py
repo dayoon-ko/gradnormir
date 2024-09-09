@@ -14,7 +14,7 @@ from arguments import DataArguments
 
 
 class SameDatasetTrainDataset(Dataset):
-    """Dataset to yield a batch of data at one time. All samples in the same batch comes from the same task.
+    """Dataset to yield a batch of data at one time. All samples in the same batch comes from the same task. 
     """
     def __init__(self, args: DataArguments, batch_size: int, seed: int, process_index: int=0, num_processes: int=1):
         train_datasets = []
@@ -189,7 +189,6 @@ class SameDatasetTrainDataset(Dataset):
         meta = self.dataset[idx]
         print("doc_id:", meta["_id"])
         print("recall:", meta["recall"])
-        print("neg:", passages[1][:10])
         del meta["query"], meta["pos"], meta["neg"]
         return query, passages, None, None
         '''

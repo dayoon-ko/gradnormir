@@ -100,3 +100,4 @@ class RetrieverTrainingArguments(TrainingArguments):
     self_distill_start_step: int = field(default=-1, metadata={"help": "Num of step when using self-distill"})
     world_size: int = field(default=4, metadata={"help": "Num of processers (jobs)"})
     n_gpu: int = field(default=1, metadata={"help": "Num of gpus"})
+    gradient_accumulation_steps: int = field(default=1, metadata={"help": "Number of gradient accumulation step"})

@@ -1,4 +1,14 @@
-# Terminal
+# Revise transformers/trainer.py 2350
+```
+                        else:
+                            grad_norm = _grad_norm
+
+                    #self.optimizer.step()
+                    self.control = self.callback_handler.on_optimizer_step(args, self.state, self.control)
+                    self._maybe_log_save_evaluate(tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval)
+```
+
+# To run code
 ```
 sr 2 48 torchrun run.py --model_name_or_path intfloat/multilingual-e5-large  --output_dir results --train_data /gallery_louvre/dayoon.ko/research/sds/eval_retrieval/BGE_M3/trec-covid/ood_all.json --same_task_within_batch True --sentence_pooling_method mean
 ```

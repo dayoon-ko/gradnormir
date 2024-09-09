@@ -16,6 +16,7 @@ def save_ckpt_for_sentence_transformers(ckpt_dir, pooling_mode: str = 'cls', nor
 
 
 class BiTrainer(Trainer):
+    
     def _save(self, output_dir: Optional[str] = None, state_dict=None):
         output_dir = output_dir if output_dir is not None else self.args.output_dir
         os.makedirs(output_dir, exist_ok=True)
@@ -23,7 +24,7 @@ class BiTrainer(Trainer):
         # Save a trained model and configuration using `save_pretrained()`.
         # They can then be reloaded using `from_pretrained()`
         if not hasattr(self.model, 'save'):
-            raise NotImplementedError(
+            raise NotImplementedError( 
                 f'MODEL {self.model.__class__.__name__} '
                 f'does not support save interface')
         else:
@@ -49,6 +50,7 @@ class BiTrainer(Trainer):
         outputs = model.forward(**inputs)
         loss = outputs.loss
         return (loss, outputs) if return_outputs else loss
+
 
     def get_train_dataloader(self):
         return DataLoader(
