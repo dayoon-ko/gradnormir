@@ -1,5 +1,6 @@
 import logging
 import os
+import json
 from pathlib import Path
 import torch.distributed as dist
 import sys 
@@ -147,7 +148,10 @@ def main():
     # Training
     # print(f"===========================Rank {dist.get_rank()}: start training===========================")
     trainer.train()
-    logs = trainer.state.history()
+    
+    logs = trainer.state.log_history
+    with open(data_args.save_log_path, "w") as f:
+        json.dump(logs, f, indent=2)
     #trainer.save_model()
     # For convenience, we also re-save the tokenizer to the same directory,
     # so that you can share your model easily on huggingface.co/models =)
