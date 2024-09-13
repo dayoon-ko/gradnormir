@@ -20,7 +20,9 @@ from arguments import ModelArguments, DataArguments, \
 from data import SameDatasetTrainDataset, EmbedCollator
 from modeling import BGEM3Model
 from trainer import BiTrainer
-
+import wandb 
+os.environ["WANDB_WATCH"] = "all"
+os.environ["WANDB_SILENT"] = "true"
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +73,7 @@ def main():
     logger.info("Model parameters %s", model_args)
     logger.info("Data parameters %s", data_args)
 
+    
     # Set seed
     set_seed(training_args.seed)
 
@@ -116,7 +119,8 @@ def main():
                                                 batch_size=training_args.per_device_train_batch_size, 
                                                 seed=training_args.seed, 
                                                 num_processes=training_args.world_size,
-                                                process_index=training_args.process_index)
+                                                #process_index=training_args.process_index
+                                                process_index=dist.get_rank())
         training_args.per_device_train_batch_size = 1
         training_args.dataloader_num_workers = 0    # avoid multi-processes
     else:

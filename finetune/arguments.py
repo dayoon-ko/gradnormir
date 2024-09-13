@@ -12,7 +12,7 @@ class ModelArguments:
     """
 
     model_name_or_path: str = field(
-        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"} 
     )
     config_name: Optional[str] = field(
         default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
@@ -97,3 +97,8 @@ class RetrieverTrainingArguments(TrainingArguments):
     fix_encoder: bool = field(default=False, metadata={"help": "Freeze the parameters of encoder"})
     colbert_dim: int = field(default=-1, metadata={"help": "Dim of colbert linear"})
     self_distill_start_step: int = field(default=-1, metadata={"help": "Num of step when using self-distill"})
+    should_log: bool = field(default=True, metadata={"help": "Whether to log"})
+    report_to: str = field(default="wandb", metadata={"help": "Use wandb"})
+    run_name: str = field(default="multilingual-e5-large", metadata={"help": "Wandb run name"})
+    logging_steps: int = field(default=1, metadata={"help": "Logging steps for wandb"})
+    
