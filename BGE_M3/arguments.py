@@ -78,7 +78,10 @@ class DataArguments:
     drop_threshold: int = field(
             default=0, metadata={"help": "The threshold for dropping merged small dataset. If the number of examples in the merged small dataset is less than this threshold, it will be dropped."}
     )
-
+    save_log_path: str = field(
+            default="results/log",  metadata={"help": "The path for saving log"}
+    )
+    
     def __post_init__(self):
         for train_dir in self.train_data:
             if not os.path.exists(train_dir):
@@ -87,7 +90,7 @@ class DataArguments:
 @dataclass
 class RetrieverTrainingArguments(TrainingArguments):
     negatives_cross_device: bool = field(default=False, metadata={"help": "share negatives across devices"})
-    temperature: Optional[float] = field(default=0.02)
+    temperature: Optional[float] = field(default=0.01)
     fix_position_embedding: bool = field(default=True, metadata={"help": "Freeze the parameters of position embeddings"})
     sentence_pooling_method: str = field(default='cls', metadata={"help": "the pooling method, should be cls or mean"})
     normlized: bool = field(default=True)
@@ -101,3 +104,5 @@ class RetrieverTrainingArguments(TrainingArguments):
     world_size: int = field(default=4, metadata={"help": "Num of processers (jobs)"})
     n_gpu: int = field(default=1, metadata={"help": "Num of gpus"})
     gradient_accumulation_steps: int = field(default=1, metadata={"help": "Number of gradient accumulation step"})
+    num_train_epochs: int = field(default=1, metadata={"help": "Number of training epochs"})
+    should_save: bool = field(default=False, metadata={"help": "Whether to save model"})
