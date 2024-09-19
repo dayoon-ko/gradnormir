@@ -55,8 +55,8 @@ class EmbeddingModelWithDropout:
     def dropout_to_input(self,
                          input_tensor,
                          dropout_prob):
-        dropout_layer = nn.Dropout(p=dropout_prob)
-        masked_tensor = dropout_layer(input_tensor)
+        bernoulli_mask = torch.rand_like(input_tensor, device="cuda") < dropout_prob
+        masked_tensor = input_tensor * bernoulli_mask
         return masked_tensor
     
     def get_output_with_dropout(self, text, dropout_prob, noise=True):
@@ -274,9 +274,9 @@ def retrieve(
     # Retrieve
     for _, (doc_id, doc) in tqdm(enumerate(dataloader), total=len(dataloader)):
         retrieved_doc_ids = retrieval(doc) 
-        with open(save_path, 'a') as f:
-            output = {"_id": doc_id, "retrieval": retrieved_doc_ids}
-            f.write(json.dumps(dict(output)) + '\n')
+        #with open(save_path, 'a') as f:
+        #    output = {"_id": doc_id, "retrieval": retrieved_doc_ids}
+        #    f.write(json.dumps(dict(output)) + '\n')
 
 
 if __name__ == "__main__":
