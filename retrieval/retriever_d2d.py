@@ -1,6 +1,8 @@
-from torch.utils.data import Dataset, DataLoader
 from langchain.vectorstores import FAISS
 from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores.utils import DistanceStrategy
+
+from torch.utils.data import Dataset, DataLoader
 from accelerate import Accelerator
 from accelerate.utils import gather_object
 from tqdm import tqdm
@@ -24,10 +26,10 @@ def load_vectorstore(
     if os.path.exists(f'{db_root}/index.faiss'):
         embeddings = HuggingFaceEmbeddings(
                         model_name=model_name, 
-                        model_kwargs={'device': 'cuda'},
+                        model_kwargs={'device': 'cpu'},
                         encode_kwargs={
                             'batch_size': 2048,
-                            'device': 'cuda'
+                            'device': 'cpu'
                             },
                         show_progress=False
                         )
@@ -101,6 +103,8 @@ class DocumentAsQueryFAISS(FAISS):
             fetch_k: int = 20,
             **kwargs
         ):
+        self.distance_strategy = DistanceStrategy.MAX_INNER_PRODUCT
+        self._normalize_L2 = True
         embedding = self._embed_documents([document_query])
         docs = self.similarity_search_with_score_by_vector(
             embedding,
@@ -113,11 +117,13 @@ class DocumentAsQueryFAISS(FAISS):
     
     @classmethod
     def load_local(
-        self, 
+        cls, 
         folder_path: str,
         embeddings: HuggingFaceEmbeddings,
         allow_dangerous_deserialization: bool = True
     ):
+        cls.distance_strategy = DistanceStrategy.MAX_INNER_PRODUCT
+        cls._normalize_L2 = True
         return FAISS.load_local(folder_path, 
                                 embeddings=embeddings,
                                 allow_dangerous_deserialization=allow_dangerous_deserialization
@@ -127,16 +133,15 @@ def retrieve(
         # accelerator: Accelerator,
         dataset_name: str="trec-covid",
         data_root: str="/gallery_louvre/dayoon.ko/research/sds/src/datasets",
-        save_root: str="results",
+        csv_path: str=None,
         db_faiss_dir: str="trec-covid",
-        csv_path = "results/multilingual-e5-large/trec-covid-n-query-mt-2.csv",
         top_k: int = 100,
         model_name: str = "intfloat/multilingual-e5-large"
     ):
     
     # Load dataset
     data_path = f"{data_root}/{dataset_name}/corpus.jsonl"
-    dataset = RetrievalDataset(data_path, csv_path=csv_path)    
+    dataset = RetrievalDataset(data_path, csv_path)    
     
     # Make a retrieval chain
     retriever_db = load_vectorstore(db_faiss_dir, model_name=model_name)
@@ -150,10 +155,10 @@ def retrieve(
     #dataloader = accelerator.prepare(dataloader)
     
     # Path to save
-    save_path = f'{save_root}/{dataset_name}.jsonl'
     if csv_path is not None:
         save_path = csv_path.replace(".csv", "-d2d-retrieval.jsonl")
-    assert not os.path.exists(save_path)
+    if top_k != 100:
+        save_path = save_path.replace(".jsonl", f"-{top_k}.jsonl")
     print(f"Save to {save_path}")
         
     # Retrieve

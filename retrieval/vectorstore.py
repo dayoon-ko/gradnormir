@@ -2,6 +2,8 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.document_loaders import DirectoryLoader, DirectoryLoader, JSONLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores.utils import DistanceStrategy
+
 import os
 import fire
 import torch
@@ -22,13 +24,12 @@ def store_data(
         glob_dir:str = "corpus.jsonl",
         data_dir: str = '/gallery_louvre/dayoon.ko/research/sds/src/datasets',
         db_faiss_dir: str = None,
-        batch_size: int = 256,
+        batch_size: int = 64,
         model_name: str = "intfloat/multilingual-e5-large", #'sentence-transformers/all-MiniLM-L6-v2'
         use_metadata: bool = False, 
     ):
     
     # Document
-    #loader = DirectoryLoader(data_dir, glob=glob_dir, show_progress=True, loader_cls=JSONLoader, loader_kwargs={'jq_schema':'.text', 'json_lines':True})
     loader = JSONLoader(
                 f"{data_dir}/{dataset_name}/{glob_dir}", 
                 jq_schema=".",  
@@ -40,8 +41,6 @@ def store_data(
     print(f'Document count: {len(documents)}')
     
     # Split document
-    #text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=10)
-    #splits = text_splitter.split_documents(documents)
     embeddings = HuggingFaceEmbeddings(
                     model_name=model_name,
                     model_kwargs={
@@ -56,7 +55,12 @@ def store_data(
     if db_faiss_dir is None:
         db_faiss_dir = dataset_name
     print(f'Extract db from documents {db_faiss_dir}')
-    db = FAISS.from_documents(documents, embeddings)
+    db = FAISS.from_documents(
+            documents, 
+            embeddings,
+            normalize_L2 = True,
+            distance_strategy=DistanceStrategy.MAX_INNER_PRODUCT
+        )
     print(f'Saving embeddings to {db_faiss_dir}')
     db.save_local(f'{db_faiss_dir}')
     print('Saved')

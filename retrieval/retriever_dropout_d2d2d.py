@@ -136,13 +136,14 @@ def retrieve(
         csv_path = "results/multilingual-e5-large/trec-covid-n-query-mt-2.csv",
         retrieval_top_k: int = 100,
         select_top_k: int = 10,
-        model_name: str = "intfloat/multilingual-e5-large"
+        model_name: str = "intfloat/multilingual-e5-large",
+        dropout_prob: float = 0.01
     ):
     
     # Load dataset
     data_path = f"{data_root}/{dataset_name}/corpus.jsonl"
     print(data_path)
-    retrieval_result_path = csv_path.replace(".csv", "-d2d-retrieval.jsonl")
+    retrieval_result_path = csv_path.replace(".csv", f"-d2d-retrieval-{dropout_prob}.jsonl")
     dataset = RetrievalDataset(
                 data_path=data_path, 
                 csv_path=csv_path, 
@@ -163,7 +164,7 @@ def retrieve(
     
     # Path to save
     if csv_path is not None:
-        save_path = csv_path.replace(".csv", "-d2d2d-retrieval.jsonl")
+        save_path = csv_path.replace(".csv", f"-d2d2d-retrieval-{dropout_prob}.jsonl")
     print(f"Save to {save_path}")
         
     # Retrieve

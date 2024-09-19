@@ -3,6 +3,7 @@ from langchain.vectorstores import FAISS
 from langchain.embeddings import HuggingFaceEmbeddings
 from accelerate import Accelerator
 from accelerate.utils import gather_object
+from tools import split_paragraph_into_sentences
 from tqdm import tqdm
 from string import Template
 import os
@@ -42,9 +43,7 @@ class RetrievalDataset(Dataset):
     def __init__(
         self,
         data_path: str,
-        csv_path: str = None,
-        retrieval_result_path: str = None,
-        select_top_k: str = 10
+        csv_path: str,
     ):  
         # Load all document corpus
         self.data_path = data_path
@@ -52,14 +51,11 @@ class RetrievalDataset(Dataset):
             corpus = [json.loads(i) for i in f.readlines()]
         corpus = {i["_id"]: i for i in corpus}
         
-        # Get retrieval result
-        selected_ids = []
-        with open(retrieval_result_path) as f:
-            for i in f.readlines():
-                retrieved_ids = json.loads(i)["retrieval"]
-                selected_ids.extend(retrieved_ids[:select_top_k])
-        selected_ids = list(set(selected_ids))
-            
+        # Select documents of which ids are in csv file
+        df = pd.read_csv(csv_path)
+        selected_ids = df["corpus-id"].tolist()
+        #selected_corpus = [corpus_dict[i] for i in ids]
+
         self.corpus = corpus
         self.dataset = selected_ids
             
@@ -75,6 +71,7 @@ class RetrievalDataset(Dataset):
     
     def collate_fn(self, batch):
         return batch[0]
+
 
 
 class Retrieval:
@@ -127,32 +124,25 @@ class DocumentAsQueryFAISS(FAISS):
                                 embeddings=embeddings,
                                 allow_dangerous_deserialization=allow_dangerous_deserialization
                                 ) 
-        
+
 def retrieve(
         # accelerator: Accelerator,
         dataset_name: str="trec-covid",
         data_root: str="/gallery_louvre/dayoon.ko/research/sds/src/datasets",
+        save_root: str="results",
         db_faiss_dir: str="trec-covid",
         csv_path = "results/multilingual-e5-large/trec-covid-n-query-mt-2.csv",
-        retrieval_top_k: int = 100,
-        select_top_k: int = 10,
+        top_k: int = 100,
         model_name: str = "intfloat/multilingual-e5-large"
     ):
     
     # Load dataset
     data_path = f"{data_root}/{dataset_name}/corpus.jsonl"
-    print(data_path)
-    retrieval_result_path = csv_path.replace(".csv", "-d2d-retrieval.jsonl")
-    dataset = RetrievalDataset(
-                data_path=data_path, 
-                csv_path=csv_path, 
-                retrieval_result_path=retrieval_result_path,
-                select_top_k=select_top_k
-            ) 
+    dataset = RetrievalDataset(data_path, csv_path=csv_path)    
     
     # Make a retrieval chain
     retriever_db = load_vectorstore(db_faiss_dir, model_name=model_name)
-    retrieval = Retrieval(retriever_db, search_kwargs={"k":retrieval_top_k})
+    retrieval = Retrieval(retriever_db, search_kwargs={"k":top_k})
     
     # Get a dataloader
     dataloader = DataLoader(dataset, 
@@ -162,16 +152,21 @@ def retrieve(
     #dataloader = accelerator.prepare(dataloader)
     
     # Path to save
+    save_path = f'{save_root}/{dataset_name}.jsonl'
     if csv_path is not None:
-        save_path = csv_path.replace(".csv", "-d2d2d-retrieval.jsonl")
+        save_path = csv_path.replace(".csv", "-s2d-retrieval.jsonl")
     print(f"Save to {save_path}")
         
     # Retrieve
     for _, (doc_id, doc) in tqdm(enumerate(dataloader), total=len(dataloader)):
-        retrieved_doc_ids = retrieval(doc) 
+        sentences = split_paragraph_into_sentences(doc)
+        total_ids = []
+        for sentence in sentences:
+            retrieved_doc_ids = retrieval(sentence)
+            total_ids.append(retrieved_doc_ids)
         with open(save_path, 'a') as f:
-            output = {"_id": doc_id, "retrieval": retrieved_doc_ids}
-            f.write(json.dumps(dict(output)) + '\n')
+            output = {"_id": doc_id, "retrieval": total_ids}
+            f.write(json.dumps(output) + '\n')
 
 
 if __name__ == "__main__":
