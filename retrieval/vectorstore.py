@@ -66,7 +66,7 @@ def store_data(
                 )    
     # Make a DB
     if db_faiss_dir is None:
-        db_faiss_dir = dataset_name
+        db_faiss_dir = f"vectorstore/{dataset_name}"
     print(f'Extract db from documents {db_faiss_dir}')
     
     '''
