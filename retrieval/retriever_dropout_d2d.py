@@ -55,7 +55,7 @@ class EmbeddingModelWithDropout:
     def dropout_to_input(self,
                          input_tensor,
                          dropout_prob):
-        bernoulli_mask = torch.rand_like(input_tensor, device="cuda") < dropout_prob
+        bernoulli_mask = torch.rand_like(input_tensor, device="cuda") > dropout_prob
         masked_tensor = input_tensor * bernoulli_mask
         return masked_tensor
     
@@ -243,12 +243,12 @@ def retrieve(
         dataset_name: str="nfcorpus",
         data_root: str="/gallery_louvre/dayoon.ko/research/sds/src/datasets",
         top_k: int = 100,
+        csv_path: str = None,
         model_name: str = "BAAI/bge-m3", # "intfloat/multilingual-e5-large",
         layer_type: str = "final",
         dropout_prob: float = 0.01
     ):
     model_raw_name = model_name.split('/')[-1]
-    csv_path= f"results/{model_raw_name}/{dataset_name}-n-query-mt-2.csv" # "/gallery_louvre/dayoon.ko/research/sds/retrieval/results/multilingual-e5-large/trec-covid-n-query-mt-2.csv",
 
     # Load dataset
     db_faiss_dir = f"vectorstore/{model_raw_name}/{dataset_name}"
@@ -274,9 +274,9 @@ def retrieve(
     # Retrieve
     for _, (doc_id, doc) in tqdm(enumerate(dataloader), total=len(dataloader)):
         retrieved_doc_ids = retrieval(doc) 
-        #with open(save_path, 'a') as f:
-        #    output = {"_id": doc_id, "retrieval": retrieved_doc_ids}
-        #    f.write(json.dumps(dict(output)) + '\n')
+        with open(save_path, 'a') as f:
+            output = {"_id": doc_id, "retrieval": retrieved_doc_ids}
+            f.write(json.dumps(dict(output)) + '\n')
 
 
 if __name__ == "__main__":

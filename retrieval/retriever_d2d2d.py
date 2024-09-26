@@ -44,7 +44,8 @@ class RetrievalDataset(Dataset):
         data_path: str,
         csv_path: str = None,
         retrieval_result_path: str = None,
-        select_top_k: str = 10
+        select_top_k: str = 10,
+        save_path: str = None
     ):  
         # Load all document corpus
         self.data_path = data_path
@@ -59,6 +60,11 @@ class RetrievalDataset(Dataset):
                 retrieved_ids = json.loads(i)["retrieval"]
                 selected_ids.extend(retrieved_ids[:select_top_k])
         selected_ids = list(set(selected_ids))
+        
+        if os.path.exists(save_path):
+            with open(save_path) as f:
+                already_ids = set([json.loads(i)["_id"] for i in f.readlines()])
+            selected_ids = [i for i in selected_ids if i not in already_ids]
             
         self.corpus = corpus
         self.dataset = selected_ids
@@ -135,7 +141,7 @@ def retrieve(
         db_faiss_dir: str="trec-covid",
         csv_path = "results/multilingual-e5-large/trec-covid-n-query-mt-2.csv",
         retrieval_top_k: int = 100,
-        select_top_k: int = 10,
+        select_top_k: int = 30,
         model_name: str = "intfloat/multilingual-e5-large"
     ):
     
@@ -143,11 +149,19 @@ def retrieve(
     data_path = f"{data_root}/{dataset_name}/corpus.jsonl"
     print(data_path)
     retrieval_result_path = csv_path.replace(".csv", "-d2d-retrieval.jsonl")
+    
+    # Path to save
+    if csv_path is not None:
+        save_path = csv_path.replace(".csv", "-d2d2d-retrieval.jsonl")
+        
+    print(f"Save to {save_path}")
+    
     dataset = RetrievalDataset(
                 data_path=data_path, 
                 csv_path=csv_path, 
                 retrieval_result_path=retrieval_result_path,
-                select_top_k=select_top_k
+                select_top_k=select_top_k,
+                save_path=save_path
             ) 
     
     # Make a retrieval chain
@@ -160,11 +174,6 @@ def retrieve(
                             collate_fn=dataset.collate_fn
                             )
     #dataloader = accelerator.prepare(dataloader)
-    
-    # Path to save
-    if csv_path is not None:
-        save_path = csv_path.replace(".csv", "-d2d2d-retrieval.jsonl")
-    print(f"Save to {save_path}")
         
     # Retrieve
     for _, (doc_id, doc) in tqdm(enumerate(dataloader), total=len(dataloader)):

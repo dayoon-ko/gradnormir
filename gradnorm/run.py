@@ -70,6 +70,7 @@ def main():
         datefmt="%m/%d/%Y %H:%M:%S",
         level=logging.INFO if training_args.local_rank in [-1, 0] else logging.WARN,
     )
+    '''
     logger.warning(
         "Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s",
         training_args.local_rank,
@@ -81,6 +82,7 @@ def main():
     logger.info("Training/evaluation parameters %s", training_args)
     logger.info("Model parameters %s", model_args)
     logger.info("Data parameters %s", data_args)
+    '''
 
     # Set seed
     set_seed(training_args.seed)
@@ -147,6 +149,14 @@ def main():
     Path(training_args.output_dir).mkdir(parents=True, exist_ok=True)
     # Training
     # print(f"===========================Rank {dist.get_rank()}: start training===========================")
+
+    logger.info("Dataset: %s", data_args.train_data)
+    logger.info("Model: %s", model_args.model_name_or_path)
+    logger.info("temperature: %s", str(training_args.temperature))
+    print("Dataset: ", data_args.train_data)
+    print("Model: ", model_args.model_name_or_path)
+    print("temperature: ", training_args.temperature)
+    
     trainer.train()
     
     logs = trainer.state.log_history
