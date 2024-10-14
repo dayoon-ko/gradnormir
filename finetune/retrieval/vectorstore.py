@@ -41,6 +41,14 @@ def store_data(
         dimension: int = 1024
     ):
     
+    # Make a DB
+    if db_faiss_dir is None:
+        db_faiss_dir = model_name + "/vectorstore"
+    if os.path.exists(db_faiss_dir):
+        print("Vectorstor already have been created!")
+        return
+    print(f'Extract db from documents {db_faiss_dir}')
+    
     # Document
     loader = JSONLoader(
                 f"{data_dir}/{dataset_name}/{glob_dir}", 
@@ -64,20 +72,7 @@ def store_data(
                         'device': 'cuda',
                     }
                 )    
-    # Make a DB
-    if db_faiss_dir is None:
-        db_faiss_dir = f"vectorstore/{model_name}/{dataset_name}"
-    print(f'Extract db from documents {db_faiss_dir}')
-    
-    '''
-    db = FAISS.from_documents(
-            documents, 
-            embeddings,
-            normalize_L2 = True,
-            distance_strategy=DistanceStrategy.MAX_INNER_PRODUCT
-        )
-    '''
-    
+
     index = faiss.IndexFlatIP(dimension) 
     vector_store = FAISS(
         embedding_function=embeddings, 

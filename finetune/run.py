@@ -2,6 +2,8 @@ import logging
 import os
 from pathlib import Path
 import torch.distributed as dist
+import sys 
+sys.path.append(os.path.abspath("."))
 
 from transformers import AutoConfig, AutoTokenizer
 from transformers import (
@@ -22,7 +24,7 @@ from modeling import BGEM3Model
 from trainer import BiTrainer
 import wandb 
 os.environ["WANDB_WATCH"] = "all"
-os.environ["WANDB_SILENT"] = "true"
+#os.environ["WANDB_SILENT"] = "true"
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,20 @@ class TrainerCallbackForDataRefresh(TrainerCallback):
             Event called at the end of an epoch.
             """
             self.train_dataset.refresh_epoch()
+            
+            
+
+class TrainerCallbackForLog(TrainerCallback):
+    def __init__(self, logger):
+        self.logger = logger
+        
+    def on_pre_optimizer_step(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        control.should_log = True
+        
+    def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        if len(state.log_history) > 0:
+            self.logger.info(state.log_history[-1])
+        
         
 
 def main():
@@ -142,6 +158,7 @@ def main():
 
     if data_args.same_task_within_batch:
         trainer.add_callback(TrainerCallbackForDataRefresh(train_dataset))
+    trainer.add_callback(TrainerCallbackForLog(logger))
     
     Path(training_args.output_dir).mkdir(parents=True, exist_ok=True)
 

@@ -24,10 +24,10 @@ def load_vectorstore(
     if os.path.exists(f'{db_root}/index.faiss'):
         embeddings = HuggingFaceEmbeddings(
                         model_name=model_name, 
-                        model_kwargs={'device': 'cuda'},
+                        model_kwargs={'device': 'cpu'},
                         encode_kwargs={
                             'batch_size': 2048,
-                            'device': 'cuda'
+                            'device': 'cpu'
                             },
                         show_progress=False
                         )
@@ -45,7 +45,9 @@ class RetrievalDataset(Dataset):
         csv_path: str = None,
         retrieval_result_path: str = None,
         select_top_k: str = 10,
-        save_path: str = None
+        save_path: str = None,
+        chunk_size: int = 100000000,
+        chunk_idx: int = 0
     ):  
         # Load all document corpus
         self.data_path = data_path
@@ -55,16 +57,39 @@ class RetrievalDataset(Dataset):
         
         # Get retrieval result
         selected_ids = []
+        wrong = 0
         with open(retrieval_result_path) as f:
             for i in f.readlines():
-                retrieved_ids = json.loads(i)["retrieval"]
-                selected_ids.extend(retrieved_ids[:select_top_k])
-        selected_ids = list(set(selected_ids))
+                try: 
+                    retrieved_ids = json.loads(i)["retrieval"]
+                    selected_ids.extend(retrieved_ids[:select_top_k])
+                except: 
+                    wrong += 1 
+                    continue 
+        print("Wrong from d2d retrieval", wrong)
+        selected_ids = [str(i) for i in list(set(selected_ids))
+                        if i in corpus]
+        print("Total:", len(selected_ids))
         
         if os.path.exists(save_path):
             with open(save_path) as f:
-                already_ids = set([json.loads(i)["_id"] for i in f.readlines()])
-            selected_ids = [i for i in selected_ids if i not in already_ids]
+                lines = f.readlines()
+            already_ids = []
+            wrong = 0
+            for l in lines:
+                try:
+                    already_ids.append(json.loads(l)["_id"])
+                except: 
+                    wrong += 1 
+                    continue 
+            print("Wrong from d2d2d results done", wrong)
+            already_ids = set(already_ids)
+            print("Done:", len(already_ids))
+            selected_ids = sorted([i for i in selected_ids if i not in already_ids])
+        print("Left:", len(selected_ids))
+        
+        selected_ids = selected_ids[chunk_idx * chunk_size: (chunk_idx + 1) * chunk_size]
+        print("Chunked:", len(selected_ids))
             
         self.corpus = corpus
         self.dataset = selected_ids
@@ -142,18 +167,18 @@ def retrieve(
         csv_path = "results/multilingual-e5-large/trec-covid-n-query-mt-2.csv",
         retrieval_top_k: int = 100,
         select_top_k: int = 30,
-        model_name: str = "intfloat/multilingual-e5-large"
+        model_name: str = "intfloat/multilingual-e5-large",
+        chunk_size: int = 1000000000,
+        chunk_idx: int = 0
     ):
     
     # Load dataset
-    data_path = f"{data_root}/{dataset_name}/corpus.jsonl"
-    print(data_path)
+    data_path = f"{data_root}/{dataset_name}/corpus_selected.jsonl"
     retrieval_result_path = csv_path.replace(".csv", "-d2d-retrieval.jsonl")
     
     # Path to save
     if csv_path is not None:
         save_path = csv_path.replace(".csv", "-d2d2d-retrieval.jsonl")
-        
     print(f"Save to {save_path}")
     
     dataset = RetrievalDataset(
@@ -161,7 +186,9 @@ def retrieve(
                 csv_path=csv_path, 
                 retrieval_result_path=retrieval_result_path,
                 select_top_k=select_top_k,
-                save_path=save_path
+                save_path=save_path,
+                chunk_size=chunk_size, 
+                chunk_idx=chunk_idx
             ) 
     
     # Make a retrieval chain

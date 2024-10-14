@@ -78,7 +78,7 @@ class DataArguments:
     drop_threshold: int = field(
             default=0, metadata={"help": "The threshold for dropping merged small dataset. If the number of examples in the merged small dataset is less than this threshold, it will be dropped."}
     )
-    save_log_path: str = field(
+    logging_pth: str = field(
             default="results/log",  metadata={"help": "The path for saving log"}
     )
     

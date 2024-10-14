@@ -1,4 +1,5 @@
 import math
+import json 
 import os.path
 import random
 from dataclasses import dataclass
@@ -16,22 +17,24 @@ from arguments import DataArguments
 class SameDatasetTrainDataset(Dataset):
     """Dataset to yield a batch of data at one time. All samples in the same batch comes from the same task. 
     """
-    def __init__(self, args: DataArguments, batch_size: int, seed: int, process_index: int=0, num_processes: int=1):
+    def __init__(self, 
+                 args: DataArguments, 
+                 batch_size: int, 
+                 seed: int, 
+                 process_index: int=0, 
+                 num_processes: int=1,
+                 logger=None,
+                 ):
         train_datasets = []
         each_data_inxs = []
         batch_size_inxs = []
         pqloss_flag = []
         cur_all_num = 0
+        self.logger = logger
         
         SMALL_THRESHOLD = args.small_threshold
         DROP_THRESHOLD = args.drop_threshold
         
-        context_feat = datasets.Features({
-            #'id': datasets.Value('int'),
-            'query': datasets.Value('string'),
-            'pos': datasets.Sequence(datasets.Value('string')),
-            'neg': datasets.Sequence(datasets.Value('string'))
-        })
         context_feat_meta = datasets.Features({
             '_id': datasets.Value('string'),
             'recall': datasets.Value('string'),
@@ -41,17 +44,10 @@ class SameDatasetTrainDataset(Dataset):
             'pos': datasets.Sequence(datasets.Value('string')),
             'neg': datasets.Sequence(datasets.Value('string'))
         })
-        context_feat_kd = datasets.Features({
-            'query': datasets.Value('string'),
-            'pos': datasets.Sequence(datasets.Value('string')),
-            'neg': datasets.Sequence(datasets.Value('string')),
-            'pos_scores': datasets.Sequence(datasets.Value('float')),
-            'neg_scores': datasets.Sequence(datasets.Value('float')),
-        })
         assert isinstance(args.train_data, list) and len(args.train_data) >= 1
         
-        if dist.get_rank() == 0:
-            self.print_batch_size(batch_size=batch_size, train_group_size=args.train_group_size)
+        #if dist.get_rank() == 0:
+        #    self.print_batch_size(batch_size=batch_size, train_group_size=args.train_group_size)
         
         for file_path in args.train_data:
             
@@ -63,19 +59,11 @@ class SameDatasetTrainDataset(Dataset):
             if not (file_path.endswith('.json') or file_path.endswith('.jsonl')):
                 continue
             if dist.get_rank() == 0:
-                print(f'loading data from {file_path} ...')
-            try:
-                temp_dataset = datasets.load_dataset('json', data_files=file_path, split='train', cache_dir=args.cache_path, features=context_feat_meta)
-            #selected_id = "bfq66x1c"
-            #import json 
-            #with open(file_path) as f:
-            #    js = json.load(f)
-            #    indices = [i for i, item in enumerate(js) if item["_id"] == selected_id]
-            #temp_dataset = temp_dataset.select(indices)
+                self.logger.info(f'loading data from {file_path} ...')
+            temp_dataset = datasets.load_dataset('json', data_files=file_path, split='train', cache_dir=args.cache_path, features=context_feat_meta)
+            selected_indices = self.get_remaining_indices(args.logging_pth, file_path)
+            temp_dataset = temp_dataset.select(selected_indices)
             #temp_dataset = temp_dataset.sort('_id')
-            except:
-                temp_dataset = datasets.load_dataset('json', data_files=file_path, split='train', cache_dir=args.cache_path, features=context_feat)
-            
             if len(temp_dataset) == 0:
                 continue
             elif len(temp_dataset) < SMALL_THRESHOLD:
@@ -112,19 +100,26 @@ class SameDatasetTrainDataset(Dataset):
         self.step = 0
         self.refresh_epoch()
     
-    def print_batch_size(self, batch_size: int, train_group_size: int):
-        length_list = ['0-500', '500-1000', '1000-2000', '2000-3000', '3000-4000', '4000-5000', '5000-6000', '6000-7000', '7000-inf']
-        batch_size_dict = {
-            k: self.get_file_batch_size(f"len-{k}.jsonl", batch_size, train_group_size) for k in length_list
-        }
-        batch_size_list = [
-            f'{length}: {batch_size_dict[length]}' for length in length_list
-        ]
-        print("=========================")
-        print("Batch Size Dict:")
-        pprint(batch_size_list)
-        print("=========================")
-    
+    def get_remaining_indices(self, logging_pth: str, file_path: str):        
+        # Read already done results
+        lines = open(logging_pth).readlines()
+        done_ids = set()
+        for l in lines: #[:-32]:
+            try:
+                sid = l.index("doc_id: ") + len("doc_id: ") 
+                eid = sid
+                done_ids.add(l[sid:].strip())
+            except Exception as e:
+                continue
+        self.logger.info(f"Already done: {len(done_ids)} datapoints")
+        
+        # Read dataset and filter already done
+        js = json.load(open(file_path))
+        indices = [i for i, item in enumerate(js) if item["_id"] not in done_ids]
+        self.logger.info(f"Left: {len(indices)} from {len(js)}")
+        
+        return indices
+
     @staticmethod
     def get_file_batch_size(file: str, batch_size: int, train_group_size: int):
         if train_group_size == 8:
@@ -193,8 +188,8 @@ class SameDatasetTrainDataset(Dataset):
         query = self.dataset[idx]['query']
         passages = self.dataset[idx]['pos'] + self.dataset[idx]['neg']
         meta = self.dataset[idx]
-        print("doc_id:", meta["_id"])
-        print("recall:", meta["recall"])
+        self.logger.info("doc_id: %s", meta["_id"])
+        self.logger.info("recall: %s", meta["recall"])
         del meta["query"], meta["pos"], meta["neg"]
         return query, passages, None, None
 

@@ -77,6 +77,9 @@ class DataArguments:
     drop_threshold: int = field(
             default=0, metadata={"help": "The threshold for dropping merged small dataset. If the number of examples in the merged small dataset is less than this threshold, it will be dropped."}
     )
+    logging_pth: str = field(
+            default="results/log",  metadata={"help": "The path for saving log"}
+    )
 
     def __post_init__(self):
         for train_dir in self.train_data:
@@ -86,7 +89,7 @@ class DataArguments:
 @dataclass
 class RetrieverTrainingArguments(TrainingArguments):
     negatives_cross_device: bool = field(default=False, metadata={"help": "share negatives across devices"})
-    temperature: Optional[float] = field(default=0.02)
+    temperature: Optional[float] = field(default=0.05)
     fix_position_embedding: bool = field(default=False, metadata={"help": "Freeze the parameters of position embeddings"})
     sentence_pooling_method: str = field(default='cls', metadata={"help": "the pooling method, should be cls or mean"})
     normlized: bool = field(default=True)
@@ -99,6 +102,10 @@ class RetrieverTrainingArguments(TrainingArguments):
     self_distill_start_step: int = field(default=-1, metadata={"help": "Num of step when using self-distill"})
     should_log: bool = field(default=True, metadata={"help": "Whether to log"})
     report_to: str = field(default="wandb", metadata={"help": "Use wandb"})
-    run_name: str = field(default="multilingual-e5-large", metadata={"help": "Wandb run name"})
-    logging_steps: int = field(default=1, metadata={"help": "Logging steps for wandb"})
-    
+    run_name: str = field(default="contriever", metadata={"help": "Wandb run name"})
+    logging_steps: int = field(default=16, metadata={"help": "Logging steps for wandb"})
+    save_steps: int = field(default=500, metadata={"help": "Logging steps for wandb"})
+    per_device_train_batch_size: int = field(default=128, metadata={"help": "Training batch size per device"})
+    learning_rate: float = field(default=1e-8, metadata={"help": "Training batch size per device"})
+    gradient_accumulation_steps: int = field(default=1, metadata={"help": "Number of gradient accumulation step"})
+    num_train_epochs: int = field(default=1, metadata={"help": "Number of training epochs"})

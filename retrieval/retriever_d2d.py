@@ -45,6 +45,7 @@ class RetrievalDataset(Dataset):
         self,
         data_path: str,
         csv_path: str,
+        save_path: str = None
     ):  
         # Load all document corpus
         self.data_path = data_path
@@ -54,9 +55,14 @@ class RetrievalDataset(Dataset):
         
         # Select documents of which ids are in csv file
         df = pd.read_csv(csv_path)
-        selected_ids = df["corpus-id"].tolist()
+        selected_ids = [str(i) for i in df["corpus-id"].tolist()]
         #selected_corpus = [corpus_dict[i] for i in ids]
-
+        
+        if os.path.exists(save_path):
+            with open(save_path) as f:
+                already_ids = set([json.loads(i)["_id"] for i in f.readlines()])
+            selected_ids = [i for i in selected_ids if i not in already_ids]
+        
         self.corpus = corpus
         self.dataset = selected_ids
             
@@ -140,8 +146,20 @@ def retrieve(
     ):
     
     # Load dataset
-    data_path = f"{data_root}/{dataset_name}/corpus.jsonl"
-    dataset = RetrievalDataset(data_path, csv_path)    
+    data_path = f"{data_root}/{dataset_name}/corpus_selected.jsonl"
+    
+    # Path to save
+    if csv_path is not None:
+        save_path = csv_path.replace(".csv", "-d2d-retrieval.jsonl")
+    if top_k != 100:
+        save_path = save_path.replace(".jsonl", f"-{top_k}.jsonl")
+    print(f"Save to {save_path}")
+    
+    dataset = RetrievalDataset(
+                data_path, 
+                csv_path, 
+                save_path=save_path
+            )    
     
     # Make a retrieval chain
     retriever_db = load_vectorstore(db_faiss_dir, model_name=model_name)
@@ -153,13 +171,6 @@ def retrieve(
                             collate_fn=dataset.collate_fn
                             )
     #dataloader = accelerator.prepare(dataloader)
-    
-    # Path to save
-    if csv_path is not None:
-        save_path = csv_path.replace(".csv", "-d2d-retrieval.jsonl")
-    if top_k != 100:
-        save_path = save_path.replace(".jsonl", f"-{top_k}.jsonl")
-    print(f"Save to {save_path}")
         
     # Retrieve
     for _, (doc_id, doc) in tqdm(enumerate(dataloader), total=len(dataloader)):

@@ -55,15 +55,32 @@ class RetrievalDataset(Dataset):
         
         # Get retrieval result
         selected_ids = []
+        wrong = 0
         with open(retrieval_result_path) as f:
             for i in f.readlines():
-                retrieved_ids = json.loads(i)["retrieval"]
-                selected_ids.extend(retrieved_ids[:select_top_k])
-        selected_ids = list(set(selected_ids))
+                try: 
+                    retrieved_ids = json.loads(i)["retrieval"]
+                    selected_ids.extend(retrieved_ids[:select_top_k])
+                except: 
+                    wrong += 1 
+                    continue 
+        print("Wrong from d2d retrieval", wrong)
+        selected_ids = [str(i) for i in list(set(selected_ids))
+                        if i in corpus]
         
         if os.path.exists(save_path):
             with open(save_path) as f:
-                already_ids = set([json.loads(i)["_id"] for i in f.readlines()])
+                lines = f.readlines()
+            already_ids = []
+            wrong = 0
+            for l in lines:
+                try:
+                    already_ids.append(json.loads(l)["_id"])
+                except: 
+                    wrong += 1 
+                    continue 
+            print("Wrong from d2d2d results done", wrong)
+            already_ids = set(already_ids)
             selected_ids = [i for i in selected_ids if i not in already_ids]
             
         self.corpus = corpus
@@ -147,8 +164,7 @@ def retrieve(
     ):
     
     # Load dataset
-    data_path = f"{data_root}/{dataset_name}/corpus.jsonl"
-    print(data_path)
+    data_path = f"{data_root}/{dataset_name}/corpus_selected.jsonl"
     retrieval_result_path = csv_path.replace(".csv", f"-d2d-retrieval-{dropout_prob}.jsonl")
     
         

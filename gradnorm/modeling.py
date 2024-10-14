@@ -35,6 +35,7 @@ class BGEM3Model(nn.Module):
                  use_self_distill: bool = False,
                  colbert_dim: int = -1,
                  self_distill_start_step: int = -1,
+                 logger = None
                  ):
         super().__init__()
         self.load_model(model_name, colbert_dim=colbert_dim)
@@ -52,6 +53,7 @@ class BGEM3Model(nn.Module):
         self.temperature = temperature
         self.use_self_distill = use_self_distill
         self.self_distill_start_step = self_distill_start_step
+        self.logger = logger
 
         self.step = 0
         if not normlized:
@@ -150,10 +152,11 @@ class BGEM3Model(nn.Module):
         q_reps = F.normalize(q_reps, p=2, dim=1)
         p_reps = F.normalize(p_reps, p=2, dim=1)
         scores = q_reps @ p_reps.T
-        print("score:", [round(i.item(), 1) for i in 
-                         (scores.squeeze() * 100).detach().cpu()
-                         ]
-              )
+        self.logger.info("score: %s", "[" + ", ".join([
+            str(round(i.item(), 1)) 
+            for i in (scores.squeeze() * 100).detach().cpu()
+            ]) + "]"
+        )
         return scores
 
     def distill_loss(self, teacher_targets, student_scores, group_size):

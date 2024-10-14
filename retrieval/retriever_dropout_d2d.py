@@ -142,6 +142,7 @@ class RetrievalDataset(Dataset):
         self,
         data_path: str,
         csv_path: str,
+        save_path: str
     ):  
         # Load all document corpus
         self.data_path = data_path
@@ -151,9 +152,13 @@ class RetrievalDataset(Dataset):
         
         # Select documents of which ids are in csv file
         df = pd.read_csv(csv_path)
-        selected_ids = df["corpus-id"].tolist()
+        selected_ids = [str(i) for i in df["corpus-id"].tolist() if str(i) in corpus]
         #selected_corpus = [corpus_dict[i] for i in ids]
-
+        
+        if os.path.exists(save_path):
+            with open(save_path) as f:
+                already_ids = set([json.loads(i)["_id"] for i in f.readlines()])
+            selected_ids = [i for i in selected_ids if i not in already_ids]
         self.corpus = corpus
         self.dataset = selected_ids
             
@@ -242,18 +247,27 @@ def retrieve(
         # accelerator: Accelerator,
         dataset_name: str="nfcorpus",
         data_root: str="/gallery_louvre/dayoon.ko/research/sds/src/datasets",
+        db_faiss_dir: str="trec-covid",
         top_k: int = 100,
         csv_path: str = None,
         model_name: str = "BAAI/bge-m3", # "intfloat/multilingual-e5-large",
         layer_type: str = "final",
         dropout_prob: float = 0.01
     ):
-    model_raw_name = model_name.split('/')[-1]
 
     # Load dataset
-    db_faiss_dir = f"vectorstore/{model_raw_name}/{dataset_name}"
-    data_path = f"{data_root}/{dataset_name}/corpus.jsonl"
-    dataset = RetrievalDataset(data_path, csv_path)    
+    data_path = f"{data_root}/{dataset_name}/corpus_selected.jsonl"
+    
+    # Path to save
+    if csv_path is not None:
+        save_path = csv_path.replace(".csv", f"-d2d-retrieval-{dropout_prob}.jsonl")
+    print(f"Save to {save_path}")
+    
+    dataset = RetrievalDataset(
+                data_path, 
+                csv_path, 
+                save_path
+            )    
     
     # Make a retrieval chain
     retriever_db = load_vectorstore(db_faiss_dir, layer_type, model_name=model_name)
@@ -265,11 +279,6 @@ def retrieve(
                             collate_fn=dataset.collate_fn
                             )
     #dataloader = accelerator.prepare(dataloader)
-    
-    # Path to save
-    if csv_path is not None:
-        save_path = f"results/{model_raw_name}/{dataset_name}-n-query-mt-2-d2d-retrieval-{dropout_prob}.jsonl"
-    print(f"Save to {save_path}")
         
     # Retrieve
     for _, (doc_id, doc) in tqdm(enumerate(dataloader), total=len(dataloader)):

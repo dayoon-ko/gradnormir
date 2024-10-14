@@ -43,8 +43,7 @@ class BiTrainer(Trainer):
         How the loss is computed by Trainer. By default, all models return the loss in the first element.
 
         Subclass and override for custom behavior.
-        """
-
+        """        
         outputs = model(**inputs)
         loss = outputs.loss
 

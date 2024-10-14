@@ -26,73 +26,45 @@ class SameDatasetTrainDataset(Dataset):
         SMALL_THRESHOLD = args.small_threshold
         DROP_THRESHOLD = args.drop_threshold
         
-        context_feat_meta = datasets.Features({
-            '_id': datasets.Value('string'),
-            'recall': datasets.Value('string'),
-            'precision': datasets.Value('string'),
-            'f1': datasets.Value('string'),
-            'query': datasets.Value('string'),
-            'pos': datasets.Sequence(datasets.Value('string')),
-            'neg': datasets.Sequence(datasets.Value('string'))
-        })
-        context_feat_kd = datasets.Features({
-            'query': datasets.Value('string'),
-            'pos': datasets.Sequence(datasets.Value('string')),
-            'neg': datasets.Sequence(datasets.Value('string')),
-            'pos_scores': datasets.Sequence(datasets.Value('float')),
-            'neg_scores': datasets.Sequence(datasets.Value('float')),
-        })
         assert isinstance(args.train_data, list) and len(args.train_data) >= 1
         
-        if dist.get_rank() == 0:
-            self.print_batch_size(batch_size=batch_size, train_group_size=args.train_group_size)
+        small_datasets = []
+        small_batch_size = math.inf
         
-        for data_dir in args.train_data:
-            if not os.path.isdir(data_dir):
-                raise FileNotFoundError(f"{data_dir} is a file, not a directionary")
+        for file_path in args.train_data:
             
-            small_datasets = []
-            small_batch_size = math.inf
+            flag = 'parallel_' in file_path
+            if not (file_path.endswith('.json') or file_path.endswith('.jsonl')):
+                continue
             
-            # Add `parallel_` in `data_dir` to indicate that this dataset is parallel corpus
-            flag = 'parallel_' in data_dir
-            for file in os.listdir(data_dir):
-                if not (file.endswith('.json') or file.endswith('.jsonl')):
-                    continue
-                
-                file_path = os.path.join(data_dir, file)
-                if dist.get_rank() == 0:
-                    print(f'loading data from {file_path} ...')
-                try:
-                    temp_dataset = datasets.load_dataset('json', data_files=file_path, split='train', cache_dir=args.cache_path, features=context_feat_meta)
-                except:
-                    temp_dataset = datasets.load_dataset('json', data_files=file_path, split='train', cache_dir=args.cache_path, features=context_feat_kd)
-                    if not args.knowledge_distillation:
-                        temp_dataset = temp_dataset.remove_columns(['pos_scores', 'neg_scores'])
-                
-                if len(temp_dataset) == 0:
-                    continue
-                elif len(temp_dataset) < SMALL_THRESHOLD:
-                    small_datasets.append(temp_dataset)
-                    small_batch_size = min(small_batch_size, self.get_file_batch_size(file, batch_size, train_group_size=args.train_group_size))
-                else:
-                    if args.max_example_num_per_dataset is not None and len(temp_dataset) > args.max_example_num_per_dataset:
-                        temp_dataset = temp_dataset.select(
-                            random.sample(list(range(len(temp_dataset))), args.max_example_num_per_dataset))
-                    train_datasets.append(temp_dataset)
-                    each_data_inxs.append(np.arange(len(temp_dataset)) + cur_all_num)
-                    cur_all_num += len(temp_dataset)
-                    batch_size_inxs.append(self.get_file_batch_size(file, batch_size, train_group_size=args.train_group_size))
-                    pqloss_flag.append(flag)
-            
-            if len(small_datasets) > 0:
-                small_dataset = datasets.concatenate_datasets(small_datasets)
-                if len(small_dataset) >= DROP_THRESHOLD:
-                    train_datasets.append(small_dataset)
-                    each_data_inxs.append(np.arange(len(small_dataset)) + cur_all_num)
-                    cur_all_num += len(small_dataset)
-                    batch_size_inxs.append(small_batch_size)
-                    pqloss_flag.append(flag)
+            if dist.get_rank() == 0:
+                print(f'loading data from {file_path} ...')
+            temp_dataset = datasets.load_dataset('json', data_files=file_path, split='train', cache_dir=args.cache_path) #, features=context_feat_meta)
+            print("Total", len(temp_dataset), "datapoints...")
+
+            if len(temp_dataset) == 0:
+                continue
+            elif len(temp_dataset) < SMALL_THRESHOLD:
+                small_datasets.append(temp_dataset)
+                small_batch_size = min(small_batch_size, self.get_file_batch_size(file_path, batch_size, train_group_size=args.train_group_size))
+            else:
+                if args.max_example_num_per_dataset is not None and len(temp_dataset) > args.max_example_num_per_dataset:
+                    temp_dataset = temp_dataset.select(
+                        random.sample(list(range(len(temp_dataset))), args.max_example_num_per_dataset))
+                train_datasets.append(temp_dataset)
+                each_data_inxs.append(np.arange(len(temp_dataset)) + cur_all_num)
+                cur_all_num += len(temp_dataset)
+                batch_size_inxs.append(self.get_file_batch_size(file_path, batch_size, train_group_size=args.train_group_size))
+                pqloss_flag.append(flag)
+        
+        if len(small_datasets) > 0:
+            small_dataset = datasets.concatenate_datasets(small_datasets)
+            if len(small_dataset) >= DROP_THRESHOLD:
+                train_datasets.append(small_dataset)
+                each_data_inxs.append(np.arange(len(small_dataset)) + cur_all_num)
+                cur_all_num += len(small_dataset)
+                batch_size_inxs.append(small_batch_size)
+                pqloss_flag.append(flag)
         
         self.dataset = datasets.concatenate_datasets(train_datasets)
         self.each_data_inxs = each_data_inxs
@@ -109,18 +81,6 @@ class SameDatasetTrainDataset(Dataset):
         self.step = 0
         self.refresh_epoch()
     
-    def print_batch_size(self, batch_size: int, train_group_size: int):
-        length_list = ['0-500', '500-1000', '1000-2000', '2000-3000', '3000-4000', '4000-5000', '5000-6000', '6000-7000', '7000-inf']
-        batch_size_dict = {
-            k: self.get_file_batch_size(f"len-{k}.jsonl", batch_size, train_group_size) for k in length_list
-        }
-        batch_size_list = [
-            f'{length}: {batch_size_dict[length]}' for length in length_list
-        ]
-        print("=========================")
-        print("Batch Size Dict:")
-        pprint(batch_size_list)
-        print("=========================")
     
     @staticmethod
     def get_file_batch_size(file: str, batch_size: int, train_group_size: int):
@@ -193,7 +153,7 @@ class SameDatasetTrainDataset(Dataset):
         batch_indices, pqloss_flag = self.batch_datas[self.step]
         cur_batch_size = int(len(batch_indices) / self.num_processes)
         batch_indices = batch_indices[self.process_index * cur_batch_size: (self.process_index + 1) * cur_batch_size]
-        batch_data = self.dataset[batch_indices]
+        batch_data = self.dataset[batch_indices] # {"_id": [# batch_size per device], "query": [...], ...}
         self.step += 1
         queries, passages, teacher_scores = self.create_batch_data(batch_raw_data=batch_data)
         # print('rank, step, flag, query, passage:', dist.get_rank(), self.step, pqloss_flag, queries, passages)
@@ -213,9 +173,9 @@ class SameDatasetTrainDataset(Dataset):
     def create_batch_data(self, batch_raw_data):
         queries, passages = [], []
         teacher_scores = []
-        for i in range(len(batch_raw_data['query'])):            
-            queries.append(batch_raw_data['query'][i])
-            
+        for i in range(len(batch_raw_data['text'])):            
+            queries.append(batch_raw_data['text'][i])
+            '''
             pos_inx = random.choice(list(range(len(batch_raw_data['pos'][i]))))
             passages.append(self.shuffle_text(batch_raw_data['pos'][i][pos_inx]))
             if 'pos_scores' in batch_raw_data and batch_raw_data['pos_scores'][i] is not None:
@@ -239,7 +199,7 @@ class SameDatasetTrainDataset(Dataset):
             
             if len(teacher_scores) > 0 and len(passages) > 0:
                 assert len(teacher_scores) == len(passages)
-
+            '''
         if self.args.query_instruction_for_retrieval is not None:
             queries = [self.args.query_instruction_for_retrieval+q for q in queries]
         if self.args.passage_instruction_for_retrieval is not None:
@@ -306,8 +266,8 @@ class EmbedCollator(DataCollatorWithPadding):
         # Concat positive and negative samples
         batch_size, max_length = p_tokens_all.shape
         p_tokens_all = p_tokens_all.reshape(batch_size, -1, max_length)
-        n_tokens_all = n_tokens_all.reshape(batch_size, -1, max_length)
         p_mask = p_mask.reshape(batch_size, -1, max_length)
+        n_tokens_all = n_tokens_all.reshape(batch_size, -1, max_length)
         n_mask = n_mask.reshape(batch_size, -1, max_length)
         k_tokens_all = torch.cat([p_tokens_all, n_tokens_all], dim=1)
         k_mask = torch.cat([p_mask, n_mask], dim=1)

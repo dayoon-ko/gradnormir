@@ -25,9 +25,6 @@ from modeling import BGEM3Model
 from trainer import BiTrainer
 
 
-logger = logging.getLogger(__name__)
- 
-
 class TrainerCallbackForDataRefresh(TrainerCallback):
     def __init__(self, train_dataset):
         self.train_dataset = train_dataset
@@ -40,12 +37,24 @@ class TrainerCallbackForDataRefresh(TrainerCallback):
 
     
 class TrainerCallbackForLog(TrainerCallback):
+    def __init__(self, logger):
+        self.logger = logger
         
-    def on_optimizer_step(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+    def on_pre_optimizer_step(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
         control.should_log = True
         
+    def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        self.logger.info(state.log_history[-1])
         
         
+def get_logger(logging_pth):
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    
+    file_handler = logging.FileHandler(logging_pth)    
+    logger.addHandler(file_handler)
+    return logger 
+
 
 def main():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
@@ -53,6 +62,9 @@ def main():
     model_args: ModelArguments
     data_args: DataArguments
     training_args: TrainingArguments
+    
+    # Setup logger
+    logger = get_logger(data_args.logging_pth)
 
     if (
             os.path.exists(training_args.output_dir)
@@ -63,26 +75,6 @@ def main():
         raise ValueError(
             f"Output directory ({training_args.output_dir}) already exists and is not empty. Use --overwrite_output_dir to overcome."
         )
-
-    # Setup logging
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
-        datefmt="%m/%d/%Y %H:%M:%S",
-        level=logging.INFO if training_args.local_rank in [-1, 0] else logging.WARN,
-    )
-    '''
-    logger.warning(
-        "Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s",
-        training_args.local_rank,
-        training_args.device,
-        training_args.n_gpu,
-        bool(training_args.local_rank != -1),
-        training_args.fp16,
-    )
-    logger.info("Training/evaluation parameters %s", training_args)
-    logger.info("Model parameters %s", model_args)
-    logger.info("Data parameters %s", data_args)
-    '''
 
     # Set seed
     set_seed(training_args.seed)
@@ -102,7 +94,8 @@ def main():
                        unified_finetuning=training_args.unified_finetuning,
                        use_self_distill=training_args.use_self_distill,
                        colbert_dim=training_args.colbert_dim,
-                       self_distill_start_step=training_args.self_distill_start_step)
+                       self_distill_start_step=training_args.self_distill_start_step,
+                       logger=logger)
 
     if training_args.fix_position_embedding:
         for k, v in model.named_parameters():
@@ -123,7 +116,9 @@ def main():
                                                 batch_size=training_args.per_device_train_batch_size, 
                                                 seed=training_args.seed, 
                                                 num_processes=training_args.world_size,
-                                                process_index=training_args.process_index)
+                                                process_index=training_args.process_index,
+                                                logger=logger,
+                                                )
         training_args.dataloader_num_workers = 0    # avoid multi-processes
     else:
         raise NotImplementedError("Not support `same_task_within_batch=False`")
@@ -144,7 +139,7 @@ def main():
 
     if data_args.same_task_within_batch:
         trainer.add_callback(TrainerCallbackForDataRefresh(train_dataset))
-    trainer.add_callback(TrainerCallbackForLog())
+    trainer.add_callback(TrainerCallbackForLog(logger))
     
     Path(training_args.output_dir).mkdir(parents=True, exist_ok=True)
     # Training
@@ -153,21 +148,15 @@ def main():
     logger.info("Dataset: %s", data_args.train_data)
     logger.info("Model: %s", model_args.model_name_or_path)
     logger.info("temperature: %s", str(training_args.temperature))
-    print("Dataset: ", data_args.train_data)
-    print("Model: ", model_args.model_name_or_path)
-    print("temperature: ", training_args.temperature)
+    logger.info("Dataset: %s", data_args.train_data)
+    logger.info("Model: %s", model_args.model_name_or_path)
+    logger.info("temperature: %s", training_args.temperature)
     
     trainer.train()
     
     logs = trainer.state.log_history
-    with open(data_args.save_log_path, "w") as f:
+    with open(data_args.logging_pth + ".json", "w") as f:
         json.dump(logs, f, indent=2)
-    #trainer.save_model()
-    # For convenience, we also re-save the tokenizer to the same directory,
-    # so that you can share your model easily on huggingface.co/models =)
-    #if trainer.is_world_process_zero():
-    #    tokenizer.save_pretrained(training_args.output_dir)
-
 
 if __name__ == "__main__":
     main()
