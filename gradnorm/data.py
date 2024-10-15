@@ -37,9 +37,8 @@ class SameDatasetTrainDataset(Dataset):
         
         context_feat_meta = datasets.Features({
             '_id': datasets.Value('string'),
-            'recall': datasets.Value('string'),
-            'precision': datasets.Value('string'),
-            'f1': datasets.Value('string'),
+            'recall': datasets.Value('float'),
+            'n-query': datasets.Value('int64'),
             'query': datasets.Value('string'),
             'pos': datasets.Sequence(datasets.Value('string')),
             'neg': datasets.Sequence(datasets.Value('string'))

@@ -50,7 +50,9 @@ class TrainerCallbackForLog(TrainerCallback):
 def get_logger(logging_pth):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
-    
+    parent = Path(logging_pth).parent
+    if not parent.exists():
+        os.makedirs(parent, exist_ok=True)
     file_handler = logging.FileHandler(logging_pth)    
     logger.addHandler(file_handler)
     return logger 
@@ -109,7 +111,6 @@ def main():
             else:
                 v.requires_grad = False
 
-    # print(f"===========================Rank {dist.get_rank()}: start loading data===========================")
     if data_args.same_task_within_batch:
         training_args.per_device_train_batch_size = 1
         train_dataset = SameDatasetTrainDataset(args=data_args, 
@@ -142,8 +143,6 @@ def main():
     trainer.add_callback(TrainerCallbackForLog(logger))
     
     Path(training_args.output_dir).mkdir(parents=True, exist_ok=True)
-    # Training
-    # print(f"===========================Rank {dist.get_rank()}: start training===========================")
 
     logger.info("Dataset: %s", data_args.train_data)
     logger.info("Model: %s", model_args.model_name_or_path)

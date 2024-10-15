@@ -89,9 +89,50 @@ These steps can be combined and executed as a pipeline for better automation and
 ## GradNorm
 
 1. [**Get GradNorm**](#1-get-gradnorm)  
-   Retrieve the GradNorm value.
+   Compute each gradient norm value.
+
+2. [**Calculate Metricm**](#1-get-gradnorm)  
+   Calculate gradient norm.
 
 ### Step in Detail
 
 ### 1. Get GradNorm
 Retrieve and calculate the GradNorm for use in your analysis.
+```
+$ cd ../gradnorm
+
+# Get gradnorm
+repo="facebook"
+model_name="contriever"
+pooling="mean"
+dropout=0.02
+temperature=0.05
+port=8000
+dataset_name="arguana"
+data_root="../retrieval/results/${model_name}"
+
+
+torchrun \
+    --rdzv-backend=c10d \
+    --rdzv-endpoint=localhost:${port} \
+    run.py \
+    --model_name_or_path ${repo}/${model_name} \
+    --output_dir outputs \
+    --train_data ${data_root}/${dataset_name}-${dropout}.json \
+    --same_task_within_batch True \
+    --sentence_pooling_method ${pooling} \
+    --do_train False \
+    --temperature ${temperature} \
+    --logging_pth results/${model_name}/${dataset_name}-${dropout}
+```
+
+### 1. Get GradNorm
+Calculate gradient norms and DRR for the retrieval failure documents.
+
+```
+python metric.py \
+   --model ${model_name} \
+   --dataset ${dataset_name} \
+   --dataset_fn ${data_root}/${dataset_name}-${dropout}.json \
+   --gradnorm_fn results/${model_name}/${dataset_name}-${dropout}.json \
+```
