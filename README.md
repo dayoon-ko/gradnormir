@@ -126,7 +126,7 @@ torchrun \
     --logging_pth results/${model_name}/${dataset_name}-${dropout}
 ```
 
-### 1. Get GradNorm
+### 2. Calculate metrics
 Calculate gradient norms and DRR for the retrieval failure documents.
 
 ```
