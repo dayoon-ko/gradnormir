@@ -1,3 +1,4 @@
+from transformers import AutoModel
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.document_loaders import DirectoryLoader, DirectoryLoader, JSONLoader
@@ -9,75 +10,85 @@ import os
 import fire
 import torch
 import faiss 
+import logging
 from tqdm import tqdm
 from glob import glob
 
-import warnings
-from langchain_core.globals import set_verbose, set_debug
-
-# Ignore all warnings
-warnings.filterwarnings("ignore")
-
-set_verbose(False)
-set_debug(False)
-
-# Define the metadata extraction function.
-def metadata_func(record: dict, metadata: dict) -> dict:
+def get_logger(log_path):
     
-    del record["text"]
-    metadata.update(record)
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
     
-    return metadata
-
+    file_handler = logging.FileHandler(log_path)
+    file_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    
+    logger.addHandler(file_handler)
+    
+    return logger    
+    
 def store_data(
-        dataset_name = "trec-covid",
-        glob_dir:str = "corpus.jsonl",
-        data_dir: str = '/gallery_louvre/dayoon.ko/research/sds/src/datasets',
-        db_faiss_dir: str = None,
-        batch_size: int = 64,
-        model_name: str = "intfloat/multilingual-e5-large", #'sentence-transformers/all-MiniLM-L6-v2'
+        data_root: str,
+        dataset_name: str,
+        glob_dir: str,
+        db_faiss_dir: str,
+        batch_size: int,
+        model_name: str,
+        logging_path: str = None, 
         use_metadata: bool = False, 
         max_length: str = 512,
-        dimension: int = 1024
+        dimension: int = None,
+        device: str = "cuda"
     ):
     
-    # Document
+    # Define the metadata extraction function.
+    def metadata_func(record: dict, metadata: dict) -> dict:
+        del record["text"]
+        metadata.update(record)
+        return metadata
+    
+    # Get logger
+    logging_path = logging_path if logging_path is not None else f"{db_faiss_dir}/index.log"
+    logger = get_logger(logging_path)
+    
+    # Check whether already created
+    if os.path.exists(f"{db_faiss_dir}/index.faiss"):
+        logger.info(f"Already created in {db_faiss_dir}")
+    elif not os.path.exists(db_faiss_dir):
+        os.makedirs(db_faiss_dir, exist_ok=True)
+    
+    # Set parameters
+    dataset_path = f"{data_root}/{dataset_name}/{glob_dir}"
+    jq_schema = "."
+    content_key = "text"
+    json_lines = True
+    
+    # Load jsonl files
     loader = JSONLoader(
-                f"{data_dir}/{dataset_name}/{glob_dir}", 
-                jq_schema=".",  
-                content_key="text",
-                json_lines=True,
+                dataset_path,
+                jq_schema=jq_schema,  
+                content_key=content_key,
+                json_lines=json_lines,
                 metadata_func=metadata_func
             )
     documents = loader.load()
-    print(f'Document count: {len(documents)}')
+    logger.info(f"Documents are loaded from {dataset_path}")
+    logger.info(f'# Documents: {len(documents)}')
     
-    # Split document
+    # Load embedding object
     embeddings = HuggingFaceEmbeddings(
                     model_name=model_name,
-                    model_kwargs={
-                        'device': 'cuda',
-                    },
-                    encode_kwargs={
-                        'batch_size': batch_size,
-                        'max_length': max_length,
-                        'device': 'cuda',
-                    }
-                )    
-    # Make a DB
-    if db_faiss_dir is None:
-        db_faiss_dir = f"vectorstore/{model_name}/{dataset_name}"
-    print(f'Extract db from documents {db_faiss_dir}')
+                    model_kwargs={'device': device},
+                    encode_kwargs={'batch_size': batch_size, 
+                                   'max_length': max_length,
+                                   'device': device}
+                )
     
-    '''
-    db = FAISS.from_documents(
-            documents, 
-            embeddings,
-            normalize_L2 = True,
-            distance_strategy=DistanceStrategy.MAX_INNER_PRODUCT
-        )
-    '''
-    
+    # Generate a database
+    if dimension is None:
+        model = AutoModel.from_pretrained(model_name)
+        dimension = model.config.hidden_size
     index = faiss.IndexFlatIP(dimension) 
     vector_store = FAISS(
         embedding_function=embeddings, 
@@ -85,11 +96,12 @@ def store_data(
         docstore= InMemoryDocstore(), 
         index_to_docstore_id={} 
     )
+    
+    # Save documents
+    logger.info(f'Saving embeddings to {db_faiss_dir}')
     vector_store.add_documents(documents=documents)
-
-    print(f'Saving embeddings to {db_faiss_dir}')
     vector_store.save_local(f'{db_faiss_dir}')
-    print('Saved')
+    logger.info('Saved')
         
         
     

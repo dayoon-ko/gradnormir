@@ -9,6 +9,15 @@ import numpy as np
 import torch.nn as nn
 from utils import load_vectorstore, Retrieval
 
+'''
+sr 1 24 -x namjune python vectorstore.py --data_root ~/research/sds/src/datasets --dataset_name arguana --glob_dir "corpus_selected.jsonl" --db_faiss_dir vectorstore/contriever/arguana --batch_size 256 --model_name facebook/contriever
+sr 1 24 -x namjune python retriever_d2d_dropout.py  --dataset_name arguana --data_root ../../src/datasets --db_faiss_dir vectorstore/contriever/arguana --save_root results/contriever --model_name facebook/contriever --dropout_rate 0.02 --pooling mean
+sr 1 24 -x namjune python retriever_d2d.py --dataset_name arguana --data_root ../../src/datasets --db_faiss_dir vectorstore/contriever/arguana --save_root results/contriever --model_name facebook/contriever
+sr 1 24 -x namjune python retriever_q2d.py --dataset_name arguana --data_root ../../src/datasets --db_faiss_dir vectorstore/contriever/arguana --save_root results/contriever --model_name facebook/contriever
+sr 1 24 -x namjune python retriever_d2d2d.py --data_root ~/research/sds/src/datasets --dataset_name arguana --input_path results/contriever/d2d-retrieval-0.02.jsonl --db_faiss_dir vectorstore/contriever/arguana --model_name facebook/contriever
+python after_d2d_retrieval.py --data_root ../../src/datasets --dataset_name arguana --save_root results/contriever --dropout 0.02
+'''
+
 logger = logging.getLogger("__main__")
 logger.setLevel(logging.INFO)
 
@@ -57,14 +66,19 @@ def retrieve(
         save_root: str,
         db_faiss_dir: str,
         model_name: str,
-        top_k: int=100,
+        pooling: str,
+        dropout_rate: float,
+        top_k: int=100
     ):
-    
-    # Load dataset
+
+    # Check dataset path
     data_path = f"{data_root}/{dataset_name}/corpus_selected.jsonl"
     if not os.path.exists(data_path):
         raise Exception(f"There is no file {data_path}")
-    save_path = f"{save_root}/d2d-retrieval.jsonl"
+    if not os.path.exists(save_root):
+        os.makedirs(save_root, exist_ok=True)
+    save_path = f"{save_root}/d2d-retrieval-{dropout_rate}.jsonl"
+    assert pooling in ["cls", "mean"], f"pooling should be either 'cls' or 'mean'"
     
     logger.info(f"Load dataset from {data_path}")
     logger.info(f"Save results to {save_path}")
@@ -80,20 +94,23 @@ def retrieve(
                             batch_size=1, 
                             collate_fn=dataset.collate_fn
                             )
-    
-    # Make a retrieval chain
+        
+    # Load vectorstore
     retriever_db = load_vectorstore(
                         model_name=model_name,
-                        db_faiss_dir=db_faiss_dir
+                        db_faiss_dir=db_faiss_dir, 
+                        dropout_rate=dropout_rate,
+                        pooling=pooling
                     )
     
     # Make a retrieval chain
     retrieval = Retrieval(
                         retriever_db, 
                         search_kwargs={
-                            "k": top_k
+                            "k": top_k, 
+                            "dropout_rate": dropout_rate
                         })
-        
+    
     # Retrieve
     for _, (doc_id, doc) in tqdm(enumerate(dataloader), total=len(dataloader)):
         retrieved_doc_ids = retrieval(doc) 
