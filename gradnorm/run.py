@@ -147,9 +147,6 @@ def main():
     logger.info("Dataset: %s", data_args.train_data)
     logger.info("Model: %s", model_args.model_name_or_path)
     logger.info("temperature: %s", str(training_args.temperature))
-    logger.info("Dataset: %s", data_args.train_data)
-    logger.info("Model: %s", model_args.model_name_or_path)
-    logger.info("temperature: %s", training_args.temperature)
     
     trainer.train()
     
