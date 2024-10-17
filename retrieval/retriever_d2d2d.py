@@ -41,7 +41,7 @@ class RetrievalDataset(Dataset):
                 try: 
                     retrieved_ids = json.loads(i)["retrieval"]
                     selected_ids.extend(retrieved_ids[:pos_top_k])
-                except:
+                except json.decoder.JSONDecodeError:
                     continue 
         selected_ids = [str(i) for i in list(set(selected_ids))
                         if i in self.corpus]
@@ -57,7 +57,7 @@ class RetrievalDataset(Dataset):
         for l in lines:
             try:
                 already_ids.append(json.loads(l)["_id"])
-            except:
+            except json.decoder.JSONDecodeError:
                 continue 
         already_ids = set(already_ids)
         self.dataset = [i for i in self.dataset if i not in already_ids]

@@ -120,7 +120,7 @@ class SplitByLengthHandler:
         })
         try:
             dataset = load_dataset('json', data_files=file_path, cache_dir=self.cache_dir, features=features)['train']
-        except:
+        except ValueError:
             dataset = load_dataset('json', data_files=file_path, cache_dir=self.cache_dir, features=kd_features)['train']
 
         dataset_with_idx_list = []

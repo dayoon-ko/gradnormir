@@ -13,6 +13,8 @@ from huggingface_hub import snapshot_download
 
 logger = logging.getLogger(__name__)
 
+COLBERT_MODEL_FILE_NAME = 'colbert_linear.pt'
+SPARSE_MODEL_FILE_NAME ='sparse_linear.pt'
 
 @dataclass 
 class EncoderOutput(ModelOutput):
@@ -83,8 +85,8 @@ class BGEM3Model(nn.Module):
                                               out_features=self.model.config.hidden_size if colbert_dim == -1 else colbert_dim)
         self.sparse_linear = torch.nn.Linear(in_features=self.model.config.hidden_size, out_features=1)
 
-        if os.path.exists(os.path.join(model_name, 'colbert_linear.pt')) and os.path.exists(
-                os.path.join(model_name, 'sparse_linear.pt')):
+        if os.path.exists(os.path.join(model_name, COLBERT_MODEL_FILE_NAME)) and os.path.exists(
+                os.path.join(model_name, SPARSE_MODEL_FILE_NAME)):
             logger.info('loading existing colbert_linear and sparse_linear---------')
             self.load_pooler(model_dir=model_name)
         else:
@@ -219,13 +221,13 @@ class BGEM3Model(nn.Module):
 
         if self.unified_finetuning:
             torch.save(_trans_state_dict(self.colbert_linear.state_dict()),
-                       os.path.join(output_dir, 'colbert_linear.pt'))
+                       os.path.join(output_dir, COLBERT_MODEL_FILE_NAME))
             torch.save(_trans_state_dict(self.sparse_linear.state_dict()),
-                       os.path.join(output_dir, 'sparse_linear.pt'))
+                       os.path.join(output_dir, SPARSE_MODEL_FILE_NAME))
 
     def load_pooler(self, model_dir):
-        colbert_state_dict = torch.load(os.path.join(model_dir, 'colbert_linear.pt'), map_location='cpu')
-        sparse_state_dict = torch.load(os.path.join(model_dir, 'sparse_linear.pt'), map_location='cpu')
+        colbert_state_dict = torch.load(os.path.join(model_dir, COLBERT_MODEL_FILE_NAME), map_location='cpu')
+        sparse_state_dict = torch.load(os.path.join(model_dir, SPARSE_MODEL_FILE_NAME), map_location='cpu')
         self.colbert_linear.load_state_dict(colbert_state_dict)
         self.sparse_linear.load_state_dict(sparse_state_dict)
 
