@@ -83,7 +83,7 @@ class DocAsQueryFAISS(FAISS):
                                     dropout_rate=dropout_rate,
                                     pooling=pooling 
                                 )
-            self.similarity_search_with_score = self.similarity_search_with_score_dropout
+            cls.similarity_search_with_score = cls.similarity_search_with_score_dropout
         return instance
         
         

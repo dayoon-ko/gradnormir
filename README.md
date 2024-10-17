@@ -18,7 +18,7 @@
 Save documents in a new corpus to a vectorstore.
 ```
 data_root="datasets"
-dataset="arguana"
+dataset_name="arguana"
 model_repo="facebook"
 model_name="contriever"
 python vectorstore.py \
