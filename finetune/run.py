@@ -67,9 +67,10 @@ def main():
             and training_args.do_train
             and not training_args.overwrite_output_dir
     ):
-        raise ValueError(
-            f"Output directory ({training_args.output_dir}) already exists and is not empty. Use --overwrite_output_dir to overcome."
-        )
+        NotImplemented
+        # raise ValueError(
+        #     f"Output directory ({training_args.output_dir}) already exists and is not empty. Use --overwrite_output_dir to overcome."
+        # )
 
     # Setup logging
     logging.basicConfig(
@@ -147,6 +148,7 @@ def main():
         query_max_len=data_args.query_max_len,
         passage_max_len=data_args.passage_max_len
     )
+    print("data_collator definition\n\n")
     
     trainer = BiTrainer(
         model=model,
@@ -155,6 +157,8 @@ def main():
         data_collator=data_collator,
         tokenizer=tokenizer
     )
+    print("BiTrainer definition\n\n")
+    
 
     if data_args.same_task_within_batch:
         trainer.add_callback(TrainerCallbackForDataRefresh(train_dataset))

@@ -227,6 +227,8 @@ class EmbedCollator(DataCollatorWithPadding):
 
     def __call__(self, features):
         query = [f[0] for f in features]
+        passage = [f[1] for f in features]
+        
         if isinstance(query[0], list):
             query = sum(query, [])
 
@@ -242,11 +244,19 @@ class EmbedCollator(DataCollatorWithPadding):
                 return_tensors="pt",
             )
             org_tokens = org_tokens["input_ids"][0]
-            # Random crop for query, positive and negative samples
+            # print("Original Tokens:", org_tokens)
+            
+            # Random crop for query
             q_tokens = randomcrop(org_tokens, self.ratio_min, self.ratio_max)
-            p_tokens = randomcrop(org_tokens, self.ratio_min, self.ratio_max)
+            # print("Cropped Query Tokens:", q_tokens)
+            # prev_p_tokens = randomcrop(org_tokens, self.ratio_min, self.ratio_max)
+            # print("Cropped Passage Tokens:", prev_p_tokens)
+            
+            # Add BOS/EOS tokens
             q_tokens = add_bos_eos(q_tokens, self.tokenizer.bos_token_id, self.tokenizer.eos_token_id)
-            p_tokens = add_bos_eos(p_tokens, self.tokenizer.bos_token_id, self.tokenizer.eos_token_id)
+            p_tokens = add_bos_eos(org_tokens, self.tokenizer.bos_token_id, self.tokenizer.eos_token_id)
+            # print("Passage Tokens with BOS/EOS:", p_tokens)
+            
             q_tokens_all.append(q_tokens)
             p_tokens_all.append(p_tokens)
         n_tokens_all = [p_tokens_all[:i] + p_tokens_all[i+1:] for i in range(len(query))]
