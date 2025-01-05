@@ -1,3 +1,23 @@
+## Revise transformers/trainer.py 2350
+```
+                        else:
+                            grad_norm = _grad_norm
+
+                    #self.optimizer.step()
+                    self.control = self.callback_handler.on_optimizer_step(args, self.state, self.control)
+                    self._maybe_log_save_evaluate(tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval)
+```
+
+## Download BEIR
+Download BEIR benchmark and select documents with at least related query from corpus.jsonl
+```
+save_root="datasets" # directory to save dataset
+num_samples=3000 # The number of in-domain documents to randomly sample
+python download_dataset.py \
+   --save_root ${save_root} \
+   --num_samples ${num_samples}
+```
+
 ## Setup
 
 1. [**Save a vectorstore**](#1-save-a-vectorstore)  
