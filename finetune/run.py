@@ -60,7 +60,9 @@ def main():
     model_args: ModelArguments
     data_args: DataArguments
     training_args: TrainingArguments
-
+    
+    print("training args: ", training_args.output_dir)
+    
     if (
             os.path.exists(training_args.output_dir)
             and os.listdir(training_args.output_dir)

@@ -3,12 +3,14 @@ import pandas as pd
 from glob import glob
 from collections import defaultdict
 import fire
+import os
 from irmetrics.topk import (
     ndcg, 
     recall,
     precision
 )
 from pprint import pprint 
+import numpy as np
 
 METRIC_FUNCS = {
     "ndcg": ndcg,
@@ -30,8 +32,13 @@ def load_qrels(root, dataset_name, score_type="binary"):
     for qrels_fn in glob(qrels_glob):
         qrels_ = pd.read_csv(qrels_fn, sep="\t")
         qrels_ = qrels_[qrels_["score"] >= 1]
-        qrels = pd.concat([qrels, qrels_], axis=1)
-        print("File names:", qrels_fn)
+        
+        query_id_type = qrels_["query-id"].dtype
+        if query_id_type == 'int64' or query_id_type == 'float64':
+            qrels = pd.concat([qrels, qrels_], axis=0)
+        else:
+            qrels = pd.concat([qrels, qrels_], axis=1)
+            
     qrels = qrels.set_index("query-id")
     
     if score_type == "max_score":
@@ -54,8 +61,11 @@ def cal_metrics(
     output_fn: str = None,
     dataset_name: str = "trec-covid-v2",
     qrels_root: str = "/gallery_louvre/dayoon.ko/research/sds/src/datasets",
+    save_path: str = None,
     is_baseline: bool = False
 ):  
+    
+    os.makedirs(f'{save_path}', exist_ok=True)
     if not is_baseline:
         output = load_jsonl(output_fn)
     else:
@@ -64,10 +74,12 @@ def cal_metrics(
     
     outputs = {met: {at: 0 for at in [5, 20, 50, 100]} for met in ["recall", "ndcg", "precision"]}
     
+    #nan_found = False  
+    
     for qid, y_pred in output.items():
         y_true = qrels_dict[qid]
-        print("y_true", y_true)
-        print("y_pred", y_pred[:10])
+        # print("y_true", y_true)
+        # print("y_pred", y_pred[:10])
         for met, func in METRIC_FUNCS.items():
             for top_k in [5, 20, 50, 100]:
                 score = 0
@@ -77,9 +89,26 @@ def cal_metrics(
                     score = func(y_true_, y_pred_)
                 else:
                     score = func(y_true, y_pred[:top_k])
+                    
+                # if not nan_found and np.isnan(score):
+                #     print(f"NaN detected!")
+                #     print(f"Query ID: {qid}")
+                #     print(f"Metric: {met}")
+                #     print(f"Top-K: {top_k}")
+                #     print(f"y_true: {y_true}")
+                #     print(f"y_pred: {y_pred[:top_k]}")
+                #     print(f"y_pred_: {y_pred_ if met == 'ndcg' else 'N/A'}")
+                #     print(f"y_true_: {y_true_ if met == 'ndcg' else 'N/A'}")
+                #     nan_found = True 
+                
                 outputs[met][top_k] += score / len(output) * 100
-    pprint(outputs) 
+                
+    eval_results_path = os.path.join(save_path, "eval_results.json")
+    with open(eval_results_path, 'w') as f:
+        json.dump(outputs, f, indent=4)
+        print(f"Saved evaluation results to {eval_results_path}")
     
+    pprint(outputs)
     
     
     

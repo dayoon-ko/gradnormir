@@ -32,10 +32,11 @@ def metadata_func(record: dict, metadata: dict) -> dict:
 def store_data(
         dataset_name = "trec-covid",
         glob_dir:str = "corpus.jsonl",
-        data_dir: str = '/gallery_louvre/dayoon.ko/research/sds/src/datasets',
+        data_dir: str = '/gallery_louvre/sohyeon.kim/eval_retrieval/retrieval/datasets',
         db_faiss_dir: str = None,
         batch_size: int = 64,
-        model_name: str = "intfloat/multilingual-e5-large", #'sentence-transformers/all-MiniLM-L6-v2'
+        model_name: str = "intfloat/multilisngual-e5-large", #'sentence-transformers/all-MiniLM-L6-v2',
+        trust_remote_code=True,
         use_metadata: bool = False, 
         max_length: str = 512,
         dimension: int = 1024
@@ -68,12 +69,19 @@ def store_data(
                     },
                     encode_kwargs={
                         'batch_size': batch_size,
-                        'max_length': max_length,
+                        #'max_length': max_length,
                         'device': 'cuda',
                     }
                 )    
 
+
+    test_text = ["This is a test sentence."]
+    test_vector = embeddings.embed_documents(test_text)
+    print(f"Embedding dimension: {len(test_vector[0])}")
+
+    dimension = len(test_vector[0])
     index = faiss.IndexFlatIP(dimension) 
+    
     vector_store = FAISS(
         embedding_function=embeddings, 
         index=index, 
@@ -81,7 +89,7 @@ def store_data(
         index_to_docstore_id={} 
     )
     vector_store.add_documents(documents=documents)
-
+    
     print(f'Saving embeddings to {db_faiss_dir}')
     vector_store.save_local(f'{db_faiss_dir}')
     print('Saved')
