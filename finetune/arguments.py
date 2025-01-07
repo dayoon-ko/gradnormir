@@ -24,7 +24,6 @@ class ModelArguments:
         default=None, metadata={"help": "Where do you want to store the pretrained models downloaded from s3"}
     )
 
-
 @dataclass
 class DataArguments:
     knowledge_distillation: bool = field(
@@ -109,3 +108,4 @@ class RetrieverTrainingArguments(TrainingArguments):
     learning_rate: float = field(default=1e-8, metadata={"help": "Training batch size per device"})
     gradient_accumulation_steps: int = field(default=1, metadata={"help": "Number of gradient accumulation step"})
     num_train_epochs: int = field(default=1, metadata={"help": "Number of training epochs"})
+    output_dir: Optional[str] = field(default=None, metadata={"help": "Where do you want to store the pretrained models downloaded from s3"})

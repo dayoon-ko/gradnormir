@@ -99,7 +99,7 @@ class Retrieval:
 def retrieve(
         # accelerator: Accelerator,
         dataset_name: str="climate-fever",
-        data_root: str="/gallery_louvre/dayoon.ko/research/sds/src/datasets",
+        data_root: str="/gallery_louvre/sohyeon.kim/eval_retrieval/retrieval/datasets",
         save_root: str="results/multilingual-e5-large",
         db_faiss_dir: str=None,
         top_k: int = 100,
