@@ -16,7 +16,14 @@ from arguments import DataArguments
 class SameDatasetTrainDataset(Dataset):
     """Dataset to yield a batch of data at one time. All samples in the same batch comes from the same task.
     """
-    def __init__(self, args: DataArguments, batch_size: int, seed: int, process_index: int=0, num_processes: int=1):
+    def __init__(self, 
+                 args: DataArguments, 
+                 batch_size: int, 
+                 seed: int, 
+                 process_index: int=0, 
+                 num_processes: int=1,
+                 logger=None,
+                 ):    
         train_datasets = []
         each_data_inxs = []
         batch_size_inxs = []
@@ -27,10 +34,10 @@ class SameDatasetTrainDataset(Dataset):
         DROP_THRESHOLD = args.drop_threshold
         
         assert isinstance(args.train_data, list) and len(args.train_data) >= 1
-        
+            
         small_datasets = []
         small_batch_size = math.inf
-        
+            
         for file_path in args.train_data:
             
             flag = 'parallel_' in file_path
@@ -39,7 +46,7 @@ class SameDatasetTrainDataset(Dataset):
             
             if dist.get_rank() == 0:
                 print(f'loading data from {file_path} ...')
-            temp_dataset = datasets.load_dataset('json', data_files=file_path, split='train', cache_dir=args.cache_path) #, features=context_feat_meta)
+            temp_dataset = datasets.load_dataset('json', data_files=file_path, split='train', cache_dir=args.cache_path)
             print("Total", len(temp_dataset), "datapoints...")
 
             if len(temp_dataset) == 0:
@@ -75,7 +82,6 @@ class SameDatasetTrainDataset(Dataset):
         self.process_index = process_index
         self.num_processes = num_processes
         self.args = args
-        self.shuffle_ratio = args.shuffle_ratio
         
         self.deterministic_generator = np.random.default_rng(seed)
         self.step = 0
@@ -148,58 +154,21 @@ class SameDatasetTrainDataset(Dataset):
         self.deterministic_generator.shuffle(batch_datas)
         self.batch_datas = batch_datas
         self.step = 0
+        
 
-    def __getitem__(self, _):  
-        batch_indices, pqloss_flag = self.batch_datas[self.step]
-        cur_batch_size = int(len(batch_indices) / self.num_processes)
-        batch_indices = batch_indices[self.process_index * cur_batch_size: (self.process_index + 1) * cur_batch_size]
-        batch_data = self.dataset[batch_indices] # {"_id": [# batch_size per device], "query": [...], ...}
-        self.step += 1
-        queries, passages, teacher_scores = self.create_batch_data(batch_raw_data=batch_data)
-        # print('rank, step, flag, query, passage:', dist.get_rank(), self.step, pqloss_flag, queries, passages)
-        return queries, passages, teacher_scores, pqloss_flag
-
-    def shuffle_text(self, text):
-        if self.shuffle_ratio > 0 and len(text) > 100 and random.random() < self.shuffle_ratio:
-            split_text = []
-            chunk_size = len(text)//3 + 1
-            for i in range(0, len(text), chunk_size):
-                split_text.append(text[i:i+chunk_size])
-            random.shuffle(split_text)
-            return " ".join(split_text)
-        else:
-            return text
+    def __getitem__(self, idx):  
+        query = self.dataset[idx]['text']
+        return query
+    
 
     def create_batch_data(self, batch_raw_data):
         queries, passages = [], []
         teacher_scores = []
-        for i in range(len(batch_raw_data['text'])):            
-            queries.append(batch_raw_data['text'][i])
-            '''
-            pos_inx = random.choice(list(range(len(batch_raw_data['pos'][i]))))
-            passages.append(self.shuffle_text(batch_raw_data['pos'][i][pos_inx]))
-            if 'pos_scores' in batch_raw_data and batch_raw_data['pos_scores'][i] is not None:
-                teacher_scores.append(batch_raw_data['pos_scores'][i][pos_inx])
-            
-            neg_inx_set = list(range(len(batch_raw_data['neg'][i])))
-            if len(batch_raw_data['neg'][i]) < self.args.train_group_size - 1:
-                num = math.ceil((self.args.train_group_size - 1) / len(batch_raw_data['neg'][i]))
-                neg_inxs = random.sample(neg_inx_set * num, self.args.train_group_size - 1)
-            else:
-                neg_inxs = random.sample(neg_inx_set, self.args.train_group_size - 1)            
-            
-            if 'neg_scores' in batch_raw_data and batch_raw_data['neg_scores'][i] is not None:
-                neg_scores = [(x, batch_raw_data['neg_scores'][i][x]) for x in neg_inxs]
-                neg_scores = sorted(neg_scores, key=lambda x:x[1], reverse=True)
-                neg_inxs = [x[0] for x in neg_scores]
-                teacher_scores.extend([x[1] for x in neg_scores])
-                
-            negs = [batch_raw_data['neg'][i][x] for x in neg_inxs]
-            passages.extend(negs)
-            
-            if len(teacher_scores) > 0 and len(passages) > 0:
-                assert len(teacher_scores) == len(passages)
-            '''
+        for i in range(len(batch_raw_data['query'])):            
+            queries.append(batch_raw_data['query'][i])
+            passages.append(batch_raw_data['pos'][i][0])
+            passages.extend(batch_raw_data["neg"][i])
+
         if self.args.query_instruction_for_retrieval is not None:
             queries = [self.args.query_instruction_for_retrieval+q for q in queries]
         if self.args.passage_instruction_for_retrieval is not None:
@@ -210,7 +179,7 @@ class SameDatasetTrainDataset(Dataset):
         return queries, passages, teacher_scores
     
     def __len__(self):
-        return len(self.batch_datas) * self.num_processes
+        return len(self.dataset)
 
 
 @dataclass
