@@ -35,7 +35,7 @@ class DataArguments:
     cache_path: Optional[str] = field(
         default=None, metadata={"help": "Where do you want to store the cached data"}
     )
-    train_group_size: int = field(default=8)
+    train_group_size: int = field(default=1)
 
     query_max_len: int = field(
         default=512,
@@ -79,7 +79,12 @@ class DataArguments:
     logging_pth: str = field(
             default="results/log",  metadata={"help": "The path for saving log"}
     )
-
+    ratio_min: float = field(
+            default=0.1,  metadata={"help": "Minimum ratio of random cropping"}
+    )
+    ratio_max: float = field(
+            default=0.5,  metadata={"help": "Maximum ratio of random cropping"}
+    )
     def __post_init__(self):
         for train_dir in self.train_data:
             if not os.path.exists(train_dir):
@@ -90,7 +95,7 @@ class RetrieverTrainingArguments(TrainingArguments):
     negatives_cross_device: bool = field(default=False, metadata={"help": "share negatives across devices"})
     temperature: Optional[float] = field(default=0.05)
     fix_position_embedding: bool = field(default=False, metadata={"help": "Freeze the parameters of position embeddings"})
-    sentence_pooling_method: str = field(default='cls', metadata={"help": "the pooling method, should be cls or mean"})
+    sentence_pooling_method: str = field(default='mean', metadata={"help": "the pooling method, should be cls or mean"})
     normlized: bool = field(default=True)
     enable_sub_batch: bool = field(default=True, metadata={"help": "Freeze the parameters of position embeddings"})
     
