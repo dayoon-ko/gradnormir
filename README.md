@@ -58,7 +58,7 @@ python retriever_d2d_dropout.py  \
    --dataset_name ${dataset_name} \
    --data_root ${data_root} \
    --db_faiss_dir vectorstore/${model_name}/${dataset_name} \
-   --save_root results/${model_name} \
+   --save_root results/${model_name}/${dataset_name} \
    --model_name ${model_repo}/${model_name} \
    --dropout_rate 0.02 \
    --pooling mean
@@ -72,16 +72,16 @@ python retriever_d2d.py \
    --dataset_name ${dataset_name} \
    --data_root ${data_root} \
    --db_faiss_dir vectorstore/${model_name}/${dataset_name} \
-   --save_root results/${model_name} \
+   --save_root results/${model_name}/${dataset_name} \
    --model_name ${model_repo}/${model_name} \
 
 # For filtering positives from sampled negatives
 python retriever_d2d2d.py \
-   --data_root ~/research/sds/src/datasets \
-   --dataset_name arguana \
-   --input_path results/contriever/d2d-retrieval-0.02.jsonl \
-   --db_faiss_dir vectorstore/contriever/arguana 
-   --model_name facebook/contriever
+   --data_root ${data_root} \
+   --dataset_name ${dataset_name} \
+   --input_path results/${model_name}/d2d-retrieval-0.02.jsonl \
+   --db_faiss_dir vectorstore/${model_name}/${dataset_name}
+   --model_name ${model_repo}/${model_name}
 ```
 
 ### 4. Save file
@@ -93,10 +93,10 @@ python retriever_q2d.py \
 
 # Get pos & neg datasets
 python after_d2d_retrieval.py \
-   --data_root ~/research/sds/src/datasets \
-   --dataset_name arguana \
-   --db_faiss_dir vectorstore/${model_name}/${dataset} \
-   --save_root results/${model_name} \
+   --data_root ${data_root} \
+   --dataset_name ${dataset_name} \
+   --db_faiss_dir vectorstore/${model_name}/${dataset_name} \
+   --save_root results/${model_name}/${dataset_name} \
    --dropout 0.02 
 ```
 
