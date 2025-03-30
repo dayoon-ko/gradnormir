@@ -79,7 +79,7 @@ python retriever_d2d.py \
 python retriever_d2d2d.py \
    --data_root ${data_root} \
    --dataset_name ${dataset_name} \
-   --input_path results/${model_name}/d2d-retrieval-0.02.jsonl \
+   --input_path results/${model_name}/${dataset_name}/d2d-retrieval-0.02.jsonl \
    --db_faiss_dir vectorstore/${model_name}/${dataset_name} \
    --model_name ${model_repo}/${model_name}
 ```
