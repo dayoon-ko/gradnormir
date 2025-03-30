@@ -106,7 +106,7 @@ python after_d2d_retrieval.py \
 ```
 
 
-### [Run as a pipeline](#run-as-a-pipeline)
+### Run as a pipeline
 These steps can be combined and executed as a pipeline for better automation and efficiency.
 
 ---
@@ -116,7 +116,7 @@ These steps can be combined and executed as a pipeline for better automation and
 1. [**Get GradNorm**](#1-get-gradnorm)  
    Compute each gradient norm value.
 
-2. [**Calculate Metricm**](#1-get-gradnorm)  
+2. [**Calculate Metric2**](#2-cal-metric)  
    Calculate gradient norm.
 
 ### Step in Detail
