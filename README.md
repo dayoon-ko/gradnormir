@@ -143,7 +143,7 @@ torchrun \
     run.py \
     --model_name_or_path ${repo}/${model_name} \
     --output_dir outputs \
-    --train_data ${data_root}/${dataset_name}-${dropout}.json \
+    --train_data ${data_root}/${dataset_name}/${dataset_name}-${dropout}.json \
     --same_task_within_batch True \
     --sentence_pooling_method ${pooling} \
     --do_train False \
