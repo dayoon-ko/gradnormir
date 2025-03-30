@@ -100,7 +100,7 @@ python retriever_q2d.py \
 python after_d2d_retrieval.py \
    --data_root ${data_root} \
    --dataset_name ${dataset_name} \
-   --save_root results/${model_name}/${dataset_name} \
+   --save_root ../gradnorm/${model_name} \
    --model_name ${model_name} \
    --dropout 0.02 
 ```
