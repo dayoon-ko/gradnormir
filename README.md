@@ -45,7 +45,7 @@ python vectorstore.py \
    --data_root ${data_root} \
    --dataset_name ${dataset_name} \
    --glob_dir "corpus_selected.jsonl" \
-   --db_faiss_dir vectorstore/${model_name}/${dataset} \
+   --db_faiss_dir vectorstore/${model_name}/${dataset_name} \
    --batch_size 256 \
    --model_name ${model_repo}/${model_name} \
    --device cuda
@@ -57,7 +57,7 @@ Run doc2doc retrieval by applying dropout for document query.
 python retriever_d2d_dropout.py  \
    --dataset_name ${dataset_name} \
    --data_root ${data_root} \
-   --db_faiss_dir vectorstore/${model_name}/${dataset} \
+   --db_faiss_dir vectorstore/${model_name}/${dataset_name} \
    --save_root results/${model_name} \
    --model_name ${model_repo}/${model_name} \
    --dropout_rate 0.02 \
@@ -68,20 +68,20 @@ python retriever_d2d_dropout.py  \
 Run doc2doc retrieval using positives as the query.
 ```
 # For sampling negatives
+python retriever_d2d.py \
+   --dataset_name ${dataset_name} \
+   --data_root ${data_root} \
+   --db_faiss_dir vectorstore/${model_name}/${dataset_name} \
+   --save_root results/${model_name} \
+   --model_name ${model_repo}/${model_name} \
+
+# For filtering positives from sampled negatives
 python retriever_d2d2d.py \
    --data_root ~/research/sds/src/datasets \
    --dataset_name arguana \
    --input_path results/contriever/d2d-retrieval-0.02.jsonl \
    --db_faiss_dir vectorstore/contriever/arguana 
    --model_name facebook/contriever
-
-# For filtering positives from sampled negatives
-python retriever_d2d.py \
-   --dataset_name ${dataset_name} \
-   --data_root ${data_root} \
-   --db_faiss_dir vectorstore/${model_name}/${dataset} \
-   --save_root results/${model_name} \
-   --model_name ${model_repo}/${model_name} \
 ```
 
 ### 4. Save file
