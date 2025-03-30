@@ -89,6 +89,11 @@ Save a file containing positive-negative pairs.
 ```
 # To get recall for each document
 python retriever_q2d.py \
+   --dataset_name ${dataset_name} \
+   --data_root ${data_root} \
+   --save_root results/${model_name}/${dataset_name} \
+   --db_faiss_dir vectorstore/${model_name}/${dataset_name} \
+   --model_name ${model_repo}/${model_name} 
    
 
 # Get pos & neg datasets
