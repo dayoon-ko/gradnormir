@@ -94,6 +94,9 @@ python retriever_q2d.py \
    --save_root results/${model_name}/${dataset_name} \
    --db_faiss_dir vectorstore/${model_name}/${dataset_name} \
    --model_name ${model_repo}/${model_name} 
+python after_q2d_retrieval.py \
+   --dataset_name ${dataset_name} \
+   --model_name ${model_name} 
    
 
 # Get pos & neg datasets
