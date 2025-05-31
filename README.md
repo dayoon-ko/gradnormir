@@ -38,6 +38,7 @@ python download_dataset.py \
 ### 1. Save a vectorstore
 Save documents in a new corpus to a vectorstore.
 ```
+cd retrieval
 data_root="datasets"
 dataset_name="arguana"
 model_repo="facebook"
