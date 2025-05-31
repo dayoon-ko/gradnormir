@@ -21,7 +21,7 @@ python download_dataset.py \
    --num_samples ${num_samples}
 ```
 ---
-#### Setup
+#### Pos & Neg Sampling
 
 1. [**Save a vectorstore**](#1-save-a-vectorstore)  
    Save documents in a new corpus to a vectorstore.
@@ -35,7 +35,6 @@ python download_dataset.py \
 4. [**Final selection**](#4-save-file)  
    Save a file of pos-neg pairs.
 
-##### Steps in Detail
 
 ##### 1. Save a vectorstore
 Save documents in a new corpus to a vectorstore.
