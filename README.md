@@ -117,7 +117,7 @@ python after_d2d_retrieval.py \
 1. [**Get GradNorm**](#1-get-gradnorm)  
    Compute each gradient norm value.
 
-2. [**Calculate Metric2**](#2-cal-metric)  
+2. [**Calculate Metrics**](#2-cal-metric)  
    Calculate gradient norm.
 
 ##### Step in Detail
