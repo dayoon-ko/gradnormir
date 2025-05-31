@@ -1,4 +1,6 @@
-## Note 
+
+
+#### Note 
 You may disable updating the optimizer on the transformer/trainer. In the version of the transformer we used, modify the transformer/trainer.py 2350 line of code as follows:
 ```
                         else:
@@ -8,8 +10,8 @@ You may disable updating the optimizer on the transformer/trainer. In the versio
                     self.control = self.callback_handler.on_optimizer_step(args, self.state, self.control)
                     self._maybe_log_save_evaluate(tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval)
 ```
-
-## Download BEIR
+---
+#### Download BEIR
 Download BEIR benchmark and select documents with at least related query from corpus.jsonl
 ```
 save_root="datasets" # directory to save dataset
@@ -18,8 +20,8 @@ python download_dataset.py \
    --save_root ${save_root} \
    --num_samples ${num_samples}
 ```
-
-## Setup
+---
+#### Setup
 
 1. [**Save a vectorstore**](#1-save-a-vectorstore)  
    Save documents in a new corpus to a vectorstore.
@@ -33,9 +35,9 @@ python download_dataset.py \
 4. [**Final selection**](#4-save-file)  
    Save a file of pos-neg pairs.
 
-### Steps in Detail
+##### Steps in Detail
 
-### 1. Save a vectorstore
+##### 1. Save a vectorstore
 Save documents in a new corpus to a vectorstore.
 ```
 data_root="datasets"
@@ -52,7 +54,7 @@ python vectorstore.py \
    --device cuda
 ```
 
-### 2. Positive sampling
+##### 2. Positive sampling
 Run doc2doc retrieval by applying dropout for document query.
 ```
 python retriever_d2d_dropout.py  \
@@ -65,7 +67,7 @@ python retriever_d2d_dropout.py  \
    --pooling mean
 ```
 
-### 3. Negative sampling
+##### 3. Negative sampling
 Run doc2doc retrieval using positives as the query.
 ```
 # For sampling negatives
@@ -85,7 +87,7 @@ python retriever_d2d.py \
    --model_name ${model_repo}/${model_name} \
 ```
 
-### 4. Save file
+##### 4. Save file
 Save a file containing positive-negative pairs.
 ```
 # To get recall for each document
@@ -109,13 +111,9 @@ python after_d2d_retrieval.py \
    --dropout 0.02 
 ```
 
-
-### Run as a pipeline
-These steps can be combined and executed as a pipeline for better automation and efficiency.
-
 ---
 
-## GradNorm
+#### GradNorm
 
 1. [**Get GradNorm**](#1-get-gradnorm)  
    Compute each gradient norm value.
@@ -123,9 +121,9 @@ These steps can be combined and executed as a pipeline for better automation and
 2. [**Calculate Metric2**](#2-cal-metric)  
    Calculate gradient norm.
 
-### Step in Detail
+##### Step in Detail
 
-### 1. Get GradNorm
+##### 1. Get GradNorm
 Retrieve and calculate the GradNorm for use in your analysis.
 ```
 $ cd ../gradnorm
@@ -155,7 +153,7 @@ torchrun \
     --logging_pth results/${model_name}/${dataset_name}-${dropout}
 ```
 
-### 2. Calculate metrics
+##### 2. Calculate metrics
 Calculate gradient norms and DRR for the retrieval failure documents.
 
 ```
