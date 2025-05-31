@@ -1,4 +1,5 @@
-## Revise transformers/trainer.py 2350
+## Note 
+You may disable updating the optimizer on the transformer/trainer. In the version of the transformer we used, modify the transformer/trainer.py 2350 line of code as follows:
 ```
                         else:
                             grad_norm = _grad_norm
