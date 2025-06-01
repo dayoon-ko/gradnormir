@@ -2,6 +2,8 @@
 
 This is a repository for the paper **"When Should Dense Retrievers Be Updated? Detecting Out-of-Distribution Corpora Using GradNormIR"** accepted in **ACL 2025 Findings.**
 
+xfun::embed_file("image.pdf")
+
 #### Before starting.. 
 You may disable updating the optimizer on the transformer/trainer. In the version of the transformer we used, modify the transformer/trainer.py 2350 line of code as follows:
 ```
