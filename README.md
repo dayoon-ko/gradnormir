@@ -166,3 +166,25 @@ python metric.py \
    --dataset_fn ${data_root}/${dataset_name}-${dropout}.json \
    --gradnorm_fn results/${model_name}/${dataset_name}-${dropout}.json \
 ```
+
+#### Citation
+```bib
+@inproceedings{ko-etal-2025-dense,
+    title = "When Should Dense Retrievers Be Updated in Evolving Corpora? Detecting Out-of-Distribution Corpora Using {G}rad{N}orm{IR}",
+    author = "Ko, Dayoon  and
+      Kim, Jinyoung  and
+      Kim, Sohyeon  and
+      Kim, Jinhyuk  and
+      Lee, Jaehoon  and
+      Song, Seonghak  and
+      Lee, Minyoung  and
+      Kim, Gunhee",
+    booktitle = "Findings of the Association for Computational Linguistics: ACL 2025",
+    year = "2025",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2025.findings-acl.1334/",
+    doi = "10.18653/v1/2025.findings-acl.1334",
+    pages = "25977--25996",
+    ISBN = "979-8-89176-256-5",}
+}
+```
