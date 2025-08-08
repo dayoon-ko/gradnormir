@@ -1,6 +1,6 @@
 ### Note ###
 
-This is a repository for the paper **"When Should Dense Retrievers Be Updated in Evolving Corpora? Detecting Out-of-Distribution Corpora Using GradNormIR"** accepted in **ACL 2025 Findings.**
+This is a repository for the paper **"When Should Dense Retrievers Be Updated in Evolving Corpora? Detecting Out-of-Distribution Corpora Using GradNormIR"** ([Paper](https://aclanthology.org/2025.findings-acl.1334.pdf)) accepted in **[ACL 2025 Findings](https://aclanthology.org/2025.findings-acl.1334/).**
 
 ![Figure 1. Motivation of Our Work](image.png)
 
